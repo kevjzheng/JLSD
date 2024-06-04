@@ -180,6 +180,22 @@ md"""
 For those who are more familiar with Python, Julia's JIT compilation might feel weird at first because the run time will be longer for the first run (due to compilation time) and you get the real time for subsequent runs. It's something you need to get used to if you are accustomed to Python's consistent behavior after hitting run. Nevertheless, this makes Julia for more suitable for running long simulations with different model parameters rather than simple scripting on lab benches.
 """
 
+# ╔═╡ 69ca90d4-efc8-4555-839e-a4756b766fac
+md"""
+Once you are setup with Julia, I recommend introducing yourself to Julia through the following resources, and familiarize with these packages
+
+- ["Why We Created Julia"](https://julialang.org/blog/2012/02/why-we-created-julia/)
+- [Julia's official documentation](https://docs.julialang.org/en/v1/)
+- [BenchmarkTools.jl](https://juliaci.github.io/BenchmarkTools.jl/stable/) - performance tracking
+- [Revise.jl](https://timholy.github.io/Revise.jl/stable/) - makes Julia feel more like a runtime language when code changes
+- [UnPack.jl](https://github.com/mauro3/UnPack.jl) - easier syntax to manipulate struct data
+- [DataStructures.jl](https://juliacollections.github.io/DataStructures.jl/dev/) - special data structures like buffers, queues, trees, etc.
+- [Parameters.jl](https://mauro3.github.io/Parameters.jl/stable/) - easier model parameter handling with default values and keywords
+- [Interpolations.jl](https://juliamath.github.io/Interpolations.jl/v0.14/) - interpolation in Julia
+- [DSP.jl](https://docs.juliadsp.org/stable/contents/) - fast DSP functions like convolutions
+- [Makie.jl](https://docs.makie.org/v0.21/) - my choice of plotting package in Julia
+"""
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -326,5 +342,6 @@ version = "5.8.0+1"
 # ╠═8f2e1bc4-597d-4e02-b406-0a3908555350
 # ╠═6f0e5fb3-0644-489e-809f-691ee56d7e2a
 # ╟─86fc629f-f925-43e0-ae21-98593eea1833
+# ╟─69ca90d4-efc8-4555-839e-a4756b766fac
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
