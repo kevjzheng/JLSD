@@ -229,7 +229,7 @@ end
 
 # ╔═╡ 86fc629f-f925-43e0-ae21-98593eea1833
 md"""
-For those who are more familiar with Python, Julia's JIT compilation might feel weird at first because the run time will be longer for the first run (due to compilation time) and you get the real time for subsequent runs. It's something you need to get used to if you are accustomed to Python's consistent behavior after hitting run. Nevertheless, this makes Julia for more suitable for running long simulations with different model parameters rather than simple scripting on lab benches.
+For those who are more familiar with Python, Julia's JIT compilation might feel weird at first because the run time will be longer for the first run (due to compilation time) and you get the real time for subsequent runs. It's something you need to get used to if you are accustomed to Python's consistent behavior after hitting run. Nevertheless, this in my opinion makes Julia more suitable for running long simulations with more complicated models rather than simple scripting on lab benches.
 """
 
 # ╔═╡ 69ca90d4-efc8-4555-839e-a4756b766fac
