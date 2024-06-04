@@ -21,40 +21,40 @@ This notebook shows how to build and simulate a *"simple"* SerDes model using Ju
 3. Detailed transmitter example
 4. Plotting (w/ Makie)
 
-Due to limited time and resource, the entire source code for this project won't be available yet on GitHub, but enough will be explicitly shown in the notebook to demonstrate illustrate the framework (which I believe is the most important part) and what Julia can do
+Due to limited time and resource, the entire source code for this project won't be available yet on GitHub, but enough will be explicitly shown in the notebook to demonstrate the framework (which I believe is the most important part) and what Julia can do
 """
 
 # ╔═╡ 54a9ae9d-888f-4fc0-945c-fb4e5534c9e1
 md"""
 ## Why Julia?
 
-While there are many languages already available for computational modeling, like Python and MATLAB, no one is without its fault. Below are some discussions on their pros/cons, and why I believe Julia is worth investigating
+While there are many languages already available for scientific computing, like Python and MATLAB, no one is without its fault. Below are some discussions on their pros/cons, and why I believe Julia is worth investigating
 
 """
 
 # ╔═╡ 8df26aaa-cf88-42ff-bbf8-50d445e5f858
 md"""
 ### Python	
-Despite its huge popularity, Python is almost a non-starter for me when it comes to buidling and simulating SerDes models. Python is a dynamic and interpreted language, which means the code is only converted to machine code at run time. Python's syntax is very human friendly and easy to read/learn, but this contributes to it being too slow compared to compiled languages like C/C++. These make Python a great prototyping/scripting language, and when speed/performance doesn't matter, it's SWEET!
+Despite its huge popularity, Python is almost a non-starter for me when it comes to buidling and simulating SerDes models. Python is a dynamic and interpreted language, which means the code is only converted to machine code at run time. Python's syntax is very human friendly and easy to read/learn, but this contributes to it being too slow compared to compiled languages like C/C++. Python is a great prototyping/scripting language, and when speed/performance doesn't matter as much, it's SWEET!
 
-For computation heavy tasks, [Numpy](https://numpy.org/) hides away Python's slowness by essentially pre-compiling all array data structures and operations in C code. However, speed of your model can then be bottlenecked by some new algorithm you are experimenting with, an explicit and necessary for-loop somewhere or post-sim data analysis. 
+For computation heavy tasks, [Numpy](https://numpy.org/) hides away Python's slowness by essentially pre-compiling all array data structures and operations in C code. However, speed of your model can then be bottlenecked by some new algorithm you are experimenting with, an explicit and necessary for-loop somewhere, or post-sim data analysis. 
 
-There are existing frameworks for SerDes modeling in Python, like [SerDesPy](https://github.com/richard259/serdespy) and [SymbaPy](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9293846) (not available on Github anymore). However, speed isn't the strongest point for these packages. SymbaPy quotes ~200 seconds for simulating 1 million bits (and ~2600 seconds w/ eye diagrams). 
+There are existing frameworks for SerDes modeling in Python, like [SerDesPy](https://github.com/richard259/serdespy) and [SymbaPy](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9293846) (not available on GitHub anymore). However, speed isn't the strongest point for these packages. SymbaPy quotes ~200 seconds for simulating 1 million bits (and ~2600 seconds w/ eye diagrams). 
 
-Nevertheless, Python's ease of entry and open-source community remains key in its wide adoption among academia and industry experts alike. 
+Nevertheless, Python's ease of entry and open-source community remains key in its wide adoption among academia and industry experts alike. Therefore, it's definitely not going away any time soon. 🐍🐍🐍🐍🐍
 
 """
 
 # ╔═╡ da497225-67b5-483b-b4f2-7cf5a4eac3e9
 md"""
 ### MATLAB 
-I love MATLAB for its plotting and tooling features (open source packages are still far away from what MATLAB plots are capable of). Its revamped Just-in-Time (JIT) compiler since R2015 gives a good trade-off between code performance and feeling "snappy" (like an interpreted language). MATLAB remains the go-to choice for industry and scientific community due to its one-size-fit-all suite. 
+I love MATLAB for its plotting and tooling features (open source packages are still far away from what MATLAB plots are capable of). Its revamped Just-in-Time (JIT) compiler since R2015 gives a good trade-off between code performance and feeling "snappy" (like an interpreted language). MATLAB remains the go-to choice for industry and scientific communities due to its one-size-fit-all suite. 
 
-But well... it's not free (and I don't blame them for having so many great functions out of the box).
+But well... it's not free (and I don't blame them for having so many great functions and features out of the box).
 
-However, because of its closed source nature, the langauge made conscious decisions to eliminate concepts like "pointers" in C/C++, and manage variable copying internally. This could lead to memory inefficiency and allocation issues if the programmer is not careful. In the case of simulating millions of bits in a SerDes system, I often found MATLAB to be a big memory hog and simulation could begin to slow down as time goes on (due to [garbage collection](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)))
+However, because of its closed source nature, the langauge made conscious decisions to eliminate concepts like "pointers" in C/C++, and manage variable passing internally. This could lead to memory inefficiency and allocation issues if the programmer is not careful. In the case of simulating millions of bits in a SerDes system, I often found MATLAB to be a big memory hog and simulation could begin to slow down as time goes on (due to [garbage collection](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)))
 
-Simulink, SerDes Toolbox, IBIS-AMI compatibility, etc. are other big pluses that come with MATLAB. Yet, most simulation models are still custom built to evaluate proprietary architecture and algorithm. Besides, codes are often compiled again to speed up simulation. And finally, for someone with a soft spot for open-source like me, I find more joy in learning a new language then figuring out how to using new proprietary tools. 
+Simulink, SerDes Toolbox, IBIS-AMI compatibility, etc. are other big pluses that come with MATLAB. Yet, most simulation models are still custom built to evaluate proprietary architecture and algorithm. Besides, codes are often compiled again to speed up simulation. And finally, for someone with a soft spot for open-source, I find more joy in learning a new language then figuring out how to using new proprietary tools. 😛
 
 """
 
@@ -111,24 +111,76 @@ end
 
 # ╔═╡ 1bd48b0b-3a48-42dc-85db-7dbdcf3d5587
 md"""
-You can see the syntax between Julia and MATLAB is quite similar. The algorithm here is very straight-forward and as a first pass, I didn't do much optimization on the register and bit level. The goal here is to really test the capability of the compilers.
+You can see the syntax between Julia and MATLAB is quite similar. The algorithm here is very straight-forward. Admittely, I didn't do much optimization on the register and bit level as a first pass, but the goal here is to really test the capability of the compilers.
 
 A couple of things to highlight
 1. Julia allows special unicode characters as part of the code! The symbol ⊻ means "xor". Though it doesn't make a difference in the code functionality, it does make one happy when you can use π and ℯ in your code.
 2. There are some smaller nuiances when dealing with Julia arrays. The .= syntax is not a typo, but rather a broadcasting operation similar to MATLAB's element-wise operations (more on this in the future).
-3. Typing in Julia is optional. Like Python, Julia can be dynamically typed, meaning variable types are determined at runtime. However, for the more advanced users, defining variable types early in Julia is also possible and often helps with performance.
+3. Variable typing in Julia is optional. Like Python, Julia can dynamically type variables at runtime. However, for the more advanced users, defining variable types early in Julia is also possible and often helps with performance.
 
-Let's talk about speed. If I benchmark the functions by generating and timing 10 million bits using PRBS31 (i.e. bist\_prbs\_gen(polynomial = [28,31], inv = false, Nsym = 10e6, seed = ones(31)), below are the results. I needed to make sure I didn't make a mistake, but yes there is an almost **10x** difference between these seemingly identical functions!
+Now, let's talk about speed. If I benchmark the functions by generating and timing 10 million bits using PRBS31 (i.e. bist\_prbs\_gen(polynomial = [28,31], inv = false, Nsym = 10e6, seed = ones(31)), below are the results. I needed to make sure I didn't make a mistake, but yes there is an almost **10x** difference between these seemingly identical functions!
 ![julia_vs_matlab](https://circuit-artists.com/wp-content/uploads/2024/06/julia_v_matlab_10x.png)
 
 
+"""
+
+# ╔═╡ 9bbe4518-cf4b-4125-8e39-e64fedd3fe19
+md"""
+For those interested, you can try implementing the same in Python. Surprisingly, the implementation using Python list instead of Numpy array is faster when I tried (~6s for list and ~12s for numpy arrays).
+
+Assuming I didn't do anything blatantly false, this just adds to the confusion about how to optimize Python code when performance matters.
+
+"""
+
+# ╔═╡ 2b4fb604-a29d-43bf-bc1f-2fba4d4dea07
+md"""
+```python
+import time
+import numpy as np
+
+def bist_prbs_gen(poly, inv, nsym, seed):
+    seq = [False]*nsym
+    for n in range(nsym):
+        seq[n] = inv
+        for p in poly:
+            seq[n] ^= seed[p-1]
+        seed[1:] = seed[0:-1]
+        seed[0] = seq[n]
+
+    return seq, seed
+
+
+def bist_prbs_gen_arr(poly, inv, nsym, seed):
+    seq = np.array([False]*nsym)
+    for n in range(nsym):
+        seq[n] = inv
+        for p in poly:
+            seq[n] ^= seed[p-1]
+        seed[1:] = seed[0:-1]
+        seed[0] = seq[n]
+
+    return seq, seed
+
+
+
+if __name__ == '__main__':
+    start = time.time()
+    seq1, seed1 = bist_prbs_gen([28, 31], False, int(10e6), [True]*31)
+    end = time.time()
+    print(end - start)   ## Showed 5.537s
+
+    start = time.time()
+    seq2, seed2 = bist_prbs_gen_arr([28, 31], False, int(10e6), np.array([True]*31))
+    end = time.time()
+    print(end - start)   ## Showed 13.543s
+```
 """
 
 # ╔═╡ e931847b-876b-4a91-b3cd-28ef6e45bf24
 md"""
 To drive the speed point home for Julia, the plot at the very top was generated after processing **one million bits** using a model that includes a jittered transmitter,  noisy channel, a simple RX with slicer adaptation and CDR loops. **The entire simulation only took ~10 seconds**. 
 
-This speed improvement could bring day-long simulations down to just hours, and allows bigger design space exploration. This initial difference alone was enough to push me to spend more time learning Julia, so here we are 😄.
+Of course, this example might be a bit artificial, but the **order of magnitude** speed improvement alone was enough to push me to spend more time learning Julia, so here we are 😄.
 """
 
 # ╔═╡ 9305392e-d630-48ed-98ed-9ee1cc52b951
@@ -326,7 +378,7 @@ version = "5.8.0+1"
 """
 
 # ╔═╡ Cell order:
-# ╟─b54766f6-263a-4fbe-991a-78a8207b5a0c
+# ╠═b54766f6-263a-4fbe-991a-78a8207b5a0c
 # ╟─54a9ae9d-888f-4fc0-945c-fb4e5534c9e1
 # ╟─8df26aaa-cf88-42ff-bbf8-50d445e5f858
 # ╟─da497225-67b5-483b-b4f2-7cf5a4eac3e9
@@ -334,6 +386,8 @@ version = "5.8.0+1"
 # ╟─fc826d03-0652-437e-9e8e-ad515c585f42
 # ╟─088317b5-4718-49d8-8c9f-e171631d7f31
 # ╟─1bd48b0b-3a48-42dc-85db-7dbdcf3d5587
+# ╟─9bbe4518-cf4b-4125-8e39-e64fedd3fe19
+# ╟─2b4fb604-a29d-43bf-bc1f-2fba4d4dea07
 # ╟─e931847b-876b-4a91-b3cd-28ef6e45bf24
 # ╟─9305392e-d630-48ed-98ed-9ee1cc52b951
 # ╟─ad2a66fa-2e5a-4953-99bf-fb4369781d14
