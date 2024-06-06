@@ -3,7 +3,7 @@ This repository hosts Pluto notebooks and relevant source codes for a personal p
 
 In the Pluto Notebooks directory, you will find the .jl files for the notebooks to be viewed and played with on your local machine. .html and .pdf files are also included in the directory
 
-The goals for this project (still as its infant stage) are
+The goals for this project (still in its infant stage) are
 - Document and share my personal Julia journey so far
 - Using SerDes simulation as an example to demonstrate the pros/cons of Julia
 - Begin a open-source and expandable SerDes simulation framework that encourages academia and industry adoption to evaluate more sophositicated architectures and algorithms
