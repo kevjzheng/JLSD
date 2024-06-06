@@ -216,12 +216,13 @@ Once you are used to it, it forces you to think a bit deeper down to the machine
 function bist_prbs_gen(;poly, inv, Nsym, seed)
     seq = Vector{Bool}(undef,Nsym)
     for n = 1:Nsym
+		seq[n] = inv
         for p in poly
             seq[n] ⊻= seed[p]
         end
         seed .= [seq[n]; seed[1:end-1]]
     end
-    return seq.⊻inv, seed
+    return seq, seed
 end
 
 # ╔═╡ 6f0e5fb3-0644-489e-809f-691ee56d7e2a
@@ -229,7 +230,7 @@ end
 
 # ╔═╡ 86fc629f-f925-43e0-ae21-98593eea1833
 md"""
-For those who are more familiar with Python, Julia's JIT compilation might feel weird at first because the run time will be longer for the first run (due to compilation time) and you get the real time for subsequent runs. It's something you need to get used to if you are accustomed to Python's consistent behavior after hitting run. Nevertheless, this in my opinion makes Julia more suitable for running long simulations with more complicated models rather than simple scripting on lab benches.
+For those who are more familiar with Python, Julia's JIT compilation might feel weird at first because the run time will be longer for the first run (due to compilation time) and you get the real time for subsequent runs. It's something you need to get used to if you are accustomed to Python's consistent behavior after hitting run. Nevertheless, this makes Julia for more suitable for running long simulations with different model parameters rather than simple scripting on lab benches.
 """
 
 # ╔═╡ 69ca90d4-efc8-4555-839e-a4756b766fac
@@ -378,7 +379,7 @@ version = "5.8.0+1"
 """
 
 # ╔═╡ Cell order:
-# ╟─b54766f6-263a-4fbe-991a-78a8207b5a0c
+# ╠═b54766f6-263a-4fbe-991a-78a8207b5a0c
 # ╟─54a9ae9d-888f-4fc0-945c-fb4e5534c9e1
 # ╟─8df26aaa-cf88-42ff-bbf8-50d445e5f858
 # ╟─da497225-67b5-483b-b4f2-7cf5a4eac3e9
@@ -395,7 +396,7 @@ version = "5.8.0+1"
 # ╠═086c7f93-17fb-4a74-a398-0a85f8afad52
 # ╠═8f2e1bc4-597d-4e02-b406-0a3908555350
 # ╠═6f0e5fb3-0644-489e-809f-691ee56d7e2a
-# ╟─86fc629f-f925-43e0-ae21-98593eea1833
+# ╠═86fc629f-f925-43e0-ae21-98593eea1833
 # ╟─69ca90d4-efc8-4555-839e-a4756b766fac
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
