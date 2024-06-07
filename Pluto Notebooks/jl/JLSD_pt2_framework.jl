@@ -129,12 +129,10 @@ With this in mind, we can start with a run_sim() function pseudo-code already as
 
 # ╔═╡ 8775eb83-56ac-4874-8950-7cf872db4dd9
 function run_sim(params)
-	@unpack blk_size, subblk_size = params
+	@unpack Nblks, Nsubblks, blk_size, subblk_size = params
 	@unpack bist_params, tx_params, rx_params = params
-
-	Nsubblks = Int(blk_size/subblk_size)
 	
-	for n = 1:blk_size
+	for n = 1:Nblks
 		# run batch processing blocks here
 		# e.g. 
 		# S = bist_gen(bist_params)
