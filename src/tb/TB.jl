@@ -95,8 +95,6 @@ function init_trx()
     wvfm.eye1.clk_skews = clkgen.skews
     wvfm.eye1.clk_rj = clkgen.rj
     wvfm.eye1.noise_rms = dslc.noise_rms
-    wvfm.eye1.x_npts_ui[] = 256
-    wvfm.eye1.y_npts[] = 256
 
     init_plot(wvfm)
     
