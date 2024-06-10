@@ -18,7 +18,7 @@ end
 
 
 function pam_gen_top!(bist)
-    @unpack pam, bits_per_sym, blk_size = bist.params
+    @unpack pam, bits_per_sym, blk_size = bist.param
     @unpack polynomial, inv, gen_seed = bist
     @unpack gen_gray_map, gen_en_precode, gen_precode_prev_sym, So_bits, So = bist
 
@@ -50,7 +50,7 @@ function pam_gen_top!(bist)
 end
 
 function ber_checker_top!(bist)
-    @unpack cur_blk, pam, bits_per_sym = bist.params
+    @unpack cur_blk, pam, bits_per_sym = bist.param
     @unpack gen_gray_map, chk_precode_prev_sym, chk_start_blk, Si, Si_bits = bist 
 
 

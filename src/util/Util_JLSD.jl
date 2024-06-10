@@ -2,7 +2,7 @@ module Util_JLSD
 using StatsBase, DSP, Interpolations, FFTW
 using MAT
 
-export u_conv, u_conv!
+export u_conv!, u_filt!
 export u_gen_ir_rc, u_fr_to_imp, u_hist
 
 
@@ -13,11 +13,33 @@ function u_conv(input, ir, dt, len; Vi_mem = zeros(1), gain = 1)
     return vconv[1:len], vconv[len+1:end]
 end
 
-function u_conv!(Vo, Vo_mem, input, ir, dt, len; Vi_mem = Float64[], gain = 1)
-    vconv = gain*dt*conv(ir, input)
+function deprecate_u_conv!(Vo, Vo_mem, input, ir, dt, len; Vi_mem = Float64[], gain = 1)
+    vconv = gain*dt*conv(input, ir)
     vconv[eachindex(Vi_mem)] .+= Vi_mem
     Vo .= vconv[1:len]
     Vo_mem .= vconv[len+1:end]
+
+    return nothing
+end
+
+function u_conv!(Vo_conv, input, ir; Vi_mem = Float64[], gain = 1)
+    Vo_conv[eachindex(Vi_mem)] .= Vi_mem
+    Vo_conv[lastindex(Vi_mem)+1:end] .= zero(Float64)
+
+    Vo_conv .+= conv(gain .* input, ir)
+    return nothing
+end
+
+
+
+function u_filt!(So_conv, input, fir; Si_mem)
+    So_conv[eachindex(Si_mem)] .= Si_mem
+    So_conv[lastindex(Si_mem)+1:end] .= zero(Float64)
+    s_in = lastindex(input)
+    
+    for n=eachindex(fir)
+        So_conv[n:s_in+n-1] .+= fir[n] .* input
+    end
 
     return nothing
 end

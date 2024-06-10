@@ -57,7 +57,7 @@ end
 
 
 function w_plot_test(wvfm; cond = true)
-    @unpack cur_blk, blk_size = wvfm.params
+    @unpack cur_blk, blk_size = wvfm.param
 
     if wvfm.en_plot & cond
             wvfm.V11_x.val = eachindex(wvfm.buffer11)
@@ -86,7 +86,7 @@ end
 
 function w_eye_gen_heatmap(heatmap_ob_trig, eye)
     if heatmap_ob_trig
-        @unpack osr, tui = eye.params
+        @unpack osr, tui = eye.param
         @unpack x_npts_ui, x_npts, y_npts, y_range = eye
         @unpack buffer, buffer_plt_len = eye
         @unpack clk_skews, clk_rj, noise_rms = eye

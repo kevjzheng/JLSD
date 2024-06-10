@@ -3,9 +3,9 @@ using Parameters, DataStructures, Interpolations
 using GLMakie, Makie
 
 
-export Params, Bist, Drv, Ch, Clkgen, Splr, Slicers, Cdr, Adpt, Eye, Wvfm
+export Param, Bist, Drv, Ch, Clkgen, Splr, Slicers, Cdr, Adpt, Eye, Wvfm
 
-@kwdef mutable struct Params
+@kwdef mutable struct Param
     const data_rate::Float64
     const osr::Int64
     const pam::Int8 = 2
@@ -23,7 +23,6 @@ export Params, Bist, Drv, Ch, Clkgen, Splr, Slicers, Cdr, Adpt, Eye, Wvfm
     const nblk = Int(round(nsym_total/blk_size))
 
     const rand_seed = 300  
-    const pr_sinc::Vector{Float64} = sinc.(-16:1/osr:16-1/osr)
 
     cur_blk = 0
     cur_subblk = 0
@@ -31,7 +30,7 @@ export Params, Bist, Drv, Ch, Clkgen, Splr, Slicers, Cdr, Adpt, Eye, Wvfm
 end
 
 @kwdef mutable struct Bist
-    const params::Params
+    const param::Param
     const polynomial::Vector{UInt8}
     const order::UInt8 = maximum(polynomial)
     const inv = false
@@ -50,15 +49,15 @@ end
     ber_err_cnt = 0
     ber_bit_cnt = 0
 
-    So_bits::Vector = zeros(Bool, params.bits_per_sym*params.blk_size)
-    So::Vector = zeros(params.blk_size)
-    Si = CircularBuffer{UInt8}(params.blk_size)
-    Si_bits::Vector = zeros(Bool, params.bits_per_sym*params.blk_size)
+    So_bits::Vector = zeros(Bool, param.bits_per_sym*param.blk_size)
+    So::Vector = zeros(param.blk_size)
+    Si = CircularBuffer{UInt8}(param.blk_size)
+    Si_bits::Vector = zeros(Bool, param.bits_per_sym*param.blk_size)
 end
 
 
 @kwdef mutable struct Drv
-    const params::Params
+    const param::Param
     ir::Vector{Float64}
     rlm_en = false
     rlm = 1.0
@@ -77,38 +76,45 @@ end
     last_rj_osr = 0.0
     last_sj_phi = 0.0
 
-    Sfir::Vector = zeros(params.blk_size)
-    Sfir_mem::Vector = zeros(length(fir)-1)
+    Sfir_conv::Vector = zeros(param.blk_size+length(fir)-1)
+    Sfir = @views Sfir_conv[1:param.blk_size]
+    Sfir_mem = @views Sfir_conv[param.blk_size+1:end]
 
     prev_nui = 4
-    V_prev_nui::Vector = zeros(prev_nui*params.osr)
-    Vext::Vector = zeros(prev_nui*params.osr+params.blk_size_osr)
-    tt_Vext = -prev_nui/2*params.osr:length(Vext)-prev_nui/2*params.osr-1
+    Vext::Vector = zeros(prev_nui*param.osr+param.blk_size_osr)
+    V_prev_nui = @views Vext[end-prev_nui*param.osr+1:end]
 
-    Vo::Vector = zeros(params.blk_size_osr) 
-    Vo_mem::Vector = zeros(lastindex(ir)-1)
+    tt_Vext = -prev_nui/2*param.osr:length(Vext)-prev_nui/2*param.osr-1
+
+    Vo_conv::Vector = zeros(param.blk_size_osr+lastindex(ir)-1) 
+    Vo = @views Vo_conv[1:param.blk_size_osr] 
+    Vo_mem = @views Vo_conv[param.blk_size_osr+1:end]
 
 end
 
 @kwdef mutable struct Ch
-    const params::Params
+    const param::Param
     noise_en = true
-    noise_rms::Float64 = 0.0
 
     ir_ch::Vector{Float64}
-    Vch::Vector = zeros(params.blk_size_osr) 
-    Vch_mem::Vector = zeros(lastindex(ir_ch)-1) 
+    Vch_conv::Vector = zeros(param.blk_size_osr+lastindex(ir_ch)-1) 
+    Vch = @views Vch_conv[1:param.blk_size_osr]
+    Vch_mem = @views Vch_conv[param.blk_size_osr+1:end]
     
-    No::Vector = zeros(params.blk_size_osr)
-    No_mem::Vector = zeros(lastindex(params.pr_sinc)-1)
+
+    noise_Z::Float64 = 50
+    noise_dbm_hz::Float64 = -174
+    noise_rms::Float64 = sqrt(0.5/param.dt*10^((noise_dbm_hz-30)/10)*noise_Z)
+
 
     ir_pad::Vector{Float64}
-    Vo::Vector = zeros(params.blk_size_osr) 
-    Vo_mem::Vector = zeros(lastindex(ir_pad)-1)
+    Vo_conv::Vector = zeros(param.blk_size_osr+lastindex(ir_pad)-1) 
+    Vo = @views Vo_conv[1:param.blk_size_osr]
+    Vo_mem = @views Vo_conv[param.blk_size_osr+1:end]
 end
 
 # @with_kw mutable struct Ctle
-#     params::Params
+#     param::param
 
 #     bypass::Bool = false
 #     nonlin_en::Bool = true
@@ -130,14 +136,14 @@ end
 #     oscal_dac_lsb = oscal_dac_range/2^oscal_dac_res
 #     oscal_code = 2^(oscal_dac_res-1)
 
-#     No = zeros(params.blk_size_osr)
+#     No = zeros(param.blk_size_osr)
 #     No_mem = zeros(1)
 
 #     Vo
 # end
 
 @kwdef mutable struct Clkgen
-    const params::Params
+    const param::Param
 
     nphases::Int8
     rj = 0
@@ -152,31 +158,33 @@ end
     pi_wrap_ui = 0
     pi_wrap_ui_Δcode = pi_max_code-10
 
-    Φo::Vector = zeros(params.subblk_size)
+    Φo::Vector = zeros(param.subblk_size)
 
 end
 
 @kwdef mutable struct Splr
-    const params::Params
+    const param::Param
 
     
     ir::Vector{Float64}
 
-    Vo::Vector = zeros(params.blk_size_osr)
-    Vo_mem::Vector = zeros(length(ir)-1)
+    Vo_conv::Vector = zeros(param.blk_size_osr+lastindex(ir)-1) 
+    Vo = @views Vo_conv[1:param.blk_size_osr]
+    Vo_mem = @views Vo_conv[param.blk_size_osr+1:end]
 
     prev_nui = 16
-    V_prev_nui::Vector = zeros(prev_nui*params.osr)
-    Vext::Vector = zeros(prev_nui*params.osr+params.blk_size_osr)
-    tt_Vext = -prev_nui/2*params.osr:length(Vext)-prev_nui/2*params.osr-1
+    Vext::Vector = zeros(prev_nui*param.osr+param.blk_size_osr)
+    V_prev_nui = @views Vext[end-prev_nui*param.osr+1:end]
 
-    So::Vector = CircularBuffer{Float64}(params.blk_size)
-    So_subblk::Vector = zeros(params.subblk_size)
+    tt_Vext = -prev_nui/2*param.osr:length(Vext)-prev_nui/2*param.osr-1
+
+    So::Vector = CircularBuffer{Float64}(param.blk_size)
+    So_subblk::Vector = zeros(param.subblk_size)
     itp_Vext = nothing
 end
 
 @kwdef mutable struct Slicers
-    const params::Params
+    const param::Param
 
     N_per_phi::Vector
     nphases = length(N_per_phi)
@@ -191,18 +199,18 @@ end
     dac_lsb = (dac_max-dac_min)/2^dac_res
 
 
-    So = [zeros(Bool, Int(N_per_phi[n%nphases+1])) for n in 0:params.subblk_size-1]
+    So = [zeros(Bool, Int(N_per_phi[n%nphases+1])) for n in 0:param.subblk_size-1]
 
 end
 
 @kwdef mutable struct Cdr
-    const params::Params
+    const param::Param
     
     Neslc_per_phi::Vector
     nphases = length(Neslc_per_phi)
 
     Sd_prev = 0
-    eslc_nvec = kron(ones(Int(params.subblk_size/nphases)),Neslc_per_phi)
+    eslc_nvec = kron(ones(Int(param.subblk_size/nphases)),Neslc_per_phi)
     filt_patterns = [[0, 1, 1], [1, 1, 0]]
 
     kp = 1/32
@@ -217,13 +225,13 @@ end
 end
 
 @kwdef mutable struct Adpt 
-    const params::Params
+    const param::Param
 
     Neslc_per_phi::Vector
     nphases = length(Neslc_per_phi)
 
     Sd_prev = 0
-    eslc_nvec = kron(ones(Int(params.subblk_size/nphases)),Neslc_per_phi)
+    eslc_nvec = kron(ones(Int(param.subblk_size/nphases)),Neslc_per_phi)
     eslc_filt_patterns = [[0, 1, 1], [1, 1, 0]]
     eslc_ref_accum = 128.0
     mu_eslc = 1/1024
@@ -235,8 +243,8 @@ end
 end
 
 @kwdef mutable struct Eye
-    const params::Params
-    x_npts_ui = Observable(Int(params.osr))
+    const param::Param
+    x_npts_ui = Observable(Int(param.osr))
     x_nui = Observable(1)
     x_npts = @lift($x_npts_ui*$x_nui)
     x_grid = @lift(-$x_nui/2 : 1/$x_npts_ui: $x_nui/2-1/$x_npts_ui)
@@ -245,9 +253,9 @@ end
     y_range = Observable(0.8)
     y_grid_edge = @lift(-$y_range/2: $y_range/$y_npts: $y_range/2)
     y_grid = @lift(($y_grid_edge[1:end-1] .+ $y_grid_edge[2:end])/2)
-    buffer_size::Int = 2^15*params.osr
+    buffer_size::Int = 2^15*param.osr
     buffer = CircularBuffer{Float64}(buffer_size)
-    buffer_plt_len::Int = 2^14*params.osr
+    buffer_plt_len::Int = 2^14*param.osr
     heatmap_ob_trig = Observable{Bool}(true)
     heatmap_ob = Observable{Matrix{Float64}}(zeros(x_npts.val, y_npts.val))
     colormap = Observable(:turbo)
@@ -258,10 +266,10 @@ end
 end
 
 @kwdef mutable struct Wvfm
-    const params::Params
+    const param::Param
 
     en_plot = true
-    plot_every_nblk = Int(round(5e5/params.blk_size))
+    plot_every_nblk = Int(round(5e5/param.blk_size))
 
     sizex = 800
     sizey = 840 
@@ -271,12 +279,12 @@ end
     axes::Array = Array{Axis}(undef,nrow,ncol)
 
     buffer11 = CircularBuffer{Float64}(8192)
-    # buffer12 = CircularBuffer{Float64}(2^16)
-    buffer12 = Float64[]
+    buffer12 = CircularBuffer{Float64}(2^16)
+    # buffer12 = Float64[]
 
     buffer21 = CircularBuffer{Float64}(8192)
-    # buffer22 = CircularBuffer{Float64}(2^16)
-    buffer22 = Float64[]
+    buffer22 = CircularBuffer{Float64}(2^16)
+    # buffer22 = Float64[]
 
     buffer31 = CircularBuffer{Float64}(8192)
     
@@ -295,7 +303,7 @@ end
     V22_x = Observable(zeros(1))
     V22_y = Observable(zeros(1))
 
-    eye1 = Eye(params=params)
+    eye1 = Eye(param=param)
     
     eslc_ref_ob = Observable(0.0)
 end

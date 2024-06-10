@@ -8,7 +8,7 @@ export cdr_top!, adpt_top!
 
 
 function clkgen_pi_itp_top!(clkgen; pi_code)
-    @unpack tui, osr, cur_subblk, subblk_size = clkgen.params
+    @unpack tui, osr, cur_subblk, subblk_size = clkgen.param
     @unpack nphases, rj, skews = clkgen
     @unpack pi_code_prev, pi_wrap_ui, pi_wrap_ui_Δcode = clkgen
     @unpack pi_nonlin_lut, pi_ui_cover, pi_codes_per_ui = clkgen
@@ -34,21 +34,20 @@ end
 
 
 function sample_itp_top!(splr, Vi)
-    @unpack osr,dt, blk_size_osr = splr.params
+    @unpack osr,dt, blk_size_osr = splr.param
     @unpack prev_nui, V_prev_nui, ir, Vo_mem = splr
     
-    u_conv!(splr.Vo, splr.Vo_mem, Vi, ir, dt, blk_size_osr, Vi_mem=Vo_mem)
+    u_conv!(splr.Vo_conv, Vi, ir, Vi_mem=Vo_mem, gain=dt)
 
-    splr.Vext = [V_prev_nui; splr.Vo]
-    splr.V_prev_nui = splr.Vo[end-prev_nui*osr+1:end]
+    splr.Vext .= [V_prev_nui; splr.Vo]
     splr.itp_Vext = linear_interpolation(splr.tt_Vext, splr.Vext)
 end
 
 function sample_phi_top!(splr, Φi)
-    @unpack cur_subblk, subblk_size = splr.params
+    @unpack cur_subblk, subblk_size = splr.param
     @unpack itp_Vext = splr
 
-    splr.So_subblk = itp_Vext.(Φi)
+    splr.So_subblk .= itp_Vext.(Φi)
     append!(splr.So, splr.So_subblk)
 
 end
@@ -62,9 +61,9 @@ function slicers_top!(slc, Si; ref_code)
         nslc = N_per_phi[phi_idx]
 
         if nslc != 0
-            slc.So[n] = (Si[n]  .- (dac_min.+dac_lsb*ref_code[phi_idx])
+            slc.So[n] .= (Si[n]  .- (dac_min .+ dac_lsb .* ref_code[phi_idx])
                                 .+ ofsts[phi_idx] 
-                                .+ noise_rms*randn(nslc)) .> 0
+                                .+ noise_rms .* randn(nslc)) .> 0
         end
     end
 end

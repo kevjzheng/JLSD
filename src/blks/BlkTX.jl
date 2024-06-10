@@ -5,23 +5,23 @@ include("../util/Util_JLSD.jl"); using .Util_JLSD
 export dac_drv_top!
 
 function dac_drv_top!(drv, Si)
-    @unpack osr, dt, blk_size, blk_size_osr = drv.params
+    @unpack osr, dt, blk_size, blk_size_osr = drv.param
     @unpack ir, fir_norm, swing, Sfir_mem, Vo_mem = drv
 
-    u_conv!(drv.Sfir, drv.Sfir_mem, Si, fir_norm, 1, blk_size; Vi_mem = Sfir_mem)
-    Vi_fir = kron(drv.Sfir,ones(osr))
+    u_filt!(drv.Sfir_conv, Si, fir_norm, Si_mem = Sfir_mem)
+    Vi_fir = kron(drv.Sfir, ones(osr))
 
     
     if drv.jitter_en
         drv_add_jitter!(drv, Vi_fir)
     end
 
-    u_conv!(drv.Vo, drv.Vo_mem, Vi_fir, ir, dt, blk_size_osr, Vi_mem=Vo_mem, gain=swing/2)
+    u_conv!(drv.Vo_conv, Vi_fir, ir, Vi_mem=Vo_mem, gain=dt*swing/2)
 
 end
 
 function drv_add_jitter!(drv, Vi_fir)
-    @unpack osr, tui, blk_size = drv.params
+    @unpack osr, tui, blk_size = drv.param
     @unpack dcd, rj_s, last_rj_osr, sj_amp_ui, sj_freq, last_sj_phi = drv
     @unpack prev_nui, V_prev_nui = drv
 
