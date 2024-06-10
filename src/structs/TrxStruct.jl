@@ -59,12 +59,13 @@ end
 @kwdef mutable struct Drv
     const param::Param
     ir::Vector{Float64}
-    rlm_en = false
-    rlm = 1.0
 
     swing = 0.7
-    fir = [1,0]
+    fir::Vector{Float64} = [1,0]
     fir_norm = fir/sum(abs.(fir))
+
+    rlm_en = false
+    rlm = 1.0
     quantize = false
     dac_res = 7 
 
@@ -279,12 +280,12 @@ end
     axes::Array = Array{Axis}(undef,nrow,ncol)
 
     buffer11 = CircularBuffer{Float64}(8192)
-    buffer12 = CircularBuffer{Float64}(2^16)
-    # buffer12 = Float64[]
+    # buffer12 = CircularBuffer{Float64}(2^16)
+    buffer12 = Float64[]
 
     buffer21 = CircularBuffer{Float64}(8192)
-    buffer22 = CircularBuffer{Float64}(2^16)
-    # buffer22 = Float64[]
+    # buffer22 = CircularBuffer{Float64}(2^16)
+    buffer22 = Float64[]
 
     buffer31 = CircularBuffer{Float64}(8192)
     
