@@ -1,5 +1,5 @@
 module TrxStruct
-using Parameters, DataStructures, Interpolations
+using Parameters, DataStructures
 using GLMakie, Makie
 
 

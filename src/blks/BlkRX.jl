@@ -35,12 +35,14 @@ end
 
 function sample_itp_top!(splr, Vi)
     @unpack osr,dt, blk_size_osr = splr.param
-    @unpack prev_nui, V_prev_nui, ir, Vo_mem = splr
+    @unpack ir, Vo_conv, Vo, Vo_mem = splr
+    @unpack prev_nui, V_prev_nui, Vext, tt_Vext = splr
     
-    u_conv!(splr.Vo_conv, Vi, ir, Vi_mem=Vo_mem, gain=dt)
+    u_conv!(Vo_conv, Vi, ir, Vi_mem=Vo_mem, gain=dt)
 
-    splr.Vext .= [V_prev_nui; splr.Vo]
-    splr.itp_Vext = linear_interpolation(splr.tt_Vext, splr.Vext)
+    Vext[eachindex(V_prev_nui)] .= V_prev_nui
+    Vext[lastindex(V_prev_nui)+1:end] .= Vo
+    splr.itp_Vext = linear_interpolation(tt_Vext, Vext)
 end
 
 function sample_phi_top!(splr, Φi)
