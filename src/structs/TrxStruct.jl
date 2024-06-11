@@ -80,17 +80,19 @@ end
     Sfir_conv::Vector = zeros(param.blk_size+length(fir)-1)
     Sfir = @views Sfir_conv[1:param.blk_size]
     Sfir_mem = @views Sfir_conv[param.blk_size+1:end]
+    Vfir::Vector = zeros(param.blk_size_osr)
 
     prev_nui = 4
     Vext::Vector = zeros(prev_nui*param.osr+param.blk_size_osr)
     V_prev_nui = @views Vext[end-prev_nui*param.osr+1:end]
-
     tt_Vext = -prev_nui/2*param.osr:length(Vext)-prev_nui/2*param.osr-1
+    tt_jitter = zeros(param.blk_size_osr)
 
     Vo_conv::Vector = zeros(param.blk_size_osr+lastindex(ir)-1) 
     Vo = @views Vo_conv[1:param.blk_size_osr] 
     Vo_mem = @views Vo_conv[param.blk_size_osr+1:end]
 
+    buffer_debug = Float64[]
 end
 
 @kwdef mutable struct Ch
@@ -274,7 +276,8 @@ end
 
     sizex = 800
     sizey = 840 
-    fig = Figure(backgroundcolor = :white, size = (sizex, sizey))
+    screen = GLMakie.Screen()
+    fig = Figure(backgroundcolor = :white, size = (sizex, sizey));
     nrow::Int8 = 3
     ncol::Int8 = 2
     axes::Array = Array{Axis}(undef,nrow,ncol)

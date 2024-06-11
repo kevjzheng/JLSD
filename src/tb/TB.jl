@@ -1,6 +1,6 @@
 using GLMakie, Makie
 using UnPack, Random, Interpolations
-include("../structs/TrxStruct.jl")
+include("../structs/TrxStruct.jl");
 includet("../util/Util_JLSD.jl"); using .Util_JLSD
 includet("../blks/BlkBIST.jl"); using .BlkBIST
 includet("../blks/BlkTX.jl"); using .BlkTX
@@ -110,6 +110,8 @@ function run_sim_blk(trx)
     pam_gen_top!(bist)
 
     dac_drv_top!(drv, bist.So)
+
+    # append!(drv.buffer_debug, mod.(u_find_0x(drv.Vo), param.osr) ./ param.osr)
     
     ch_top!(ch, drv.Vo)
 

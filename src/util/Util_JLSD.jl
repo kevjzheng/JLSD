@@ -1,26 +1,18 @@
 module Util_JLSD
-using StatsBase, DSP, Interpolations, FFTW
-using MAT
+using StatsBase, DSP, Interpolations, FFTW, MAT
 
 export u_conv!, u_filt!
-export u_gen_ir_rc, u_fr_to_imp, u_hist
+export u_gen_ir_rc, u_fr_to_imp, u_hist, u_find_0x, u_unwrap_0x
 
 
-function u_conv(input, ir, dt, len; Vi_mem = zeros(1), gain = 1)
-    vconv = gain*dt*conv(ir, input)
+function u_conv(input, ir; Vi_mem = zeros(1), gain = 1)
+    vconv = gain .* conv(ir, input)
     vconv[eachindex(Vi_mem)] += Vi_mem
 
-    return vconv[1:len], vconv[len+1:end]
+    return vconv
 end
 
-function deprecate_u_conv!(Vo, Vo_mem, input, ir, dt, len; Vi_mem = Float64[], gain = 1)
-    vconv = gain*dt*conv(input, ir)
-    vconv[eachindex(Vi_mem)] .+= Vi_mem
-    Vo .= vconv[1:len]
-    Vo_mem .= vconv[len+1:end]
 
-    return nothing
-end
 
 function u_conv!(Vo_conv, input, ir; Vi_mem = Float64[], gain = 1)
     Vo_conv[eachindex(Vi_mem)] .= Vi_mem
@@ -69,6 +61,31 @@ function u_hist(samples, minval, maxval, nbin)
         weights[idx] += 1
     end
     return weights
+end
+
+
+function u_find_0x(input) #vectorized implementation
+    sign_input = sign.(input)
+    diff_sign = @views sign_input[2:end] .- sign_input[1:end-1]
+    x_idx_crs = findall(abs.(diff_sign) .>1 )
+    x_idx_fine = Vector{Float64}(undef, lastindex(x_idx_crs))
+
+    @. x_idx_fine = x_idx_crs+input[x_idx_crs]/(input[x_idx_crs]-input[x_idx_crs+1])
+    
+    return x_idx_fine
+end
+
+function u_unwrap_0x(xpts; tol_Δui = 0.5) #assumes 0-1UI range, vectorized
+    nwrap = 0
+    xpts_unwrap = zeros(lastindex(xpts))
+    
+    ΔΦ = @views xpts[1:end-1] .- xpts[2:end]
+
+    nwrap = cumsum( (abs.(ΔΦ) .> tol_Δui) .* sign.(ΔΦ))
+
+    xpts_unwrap[2:end] .= nwrap .+ @views xpts[2:end]
+
+    return xpts_unwrap
 end
 
 function u_fr_to_imp(f, H, Tsym, osr; npre=50, npost=200, savename = "", t_name="dt", ir_name="ir")

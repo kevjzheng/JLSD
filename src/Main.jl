@@ -1,4 +1,5 @@
-using Revise, BenchmarkTools, Profile
+using Revise, BenchmarkTools, ProfileCanvas
+# import Plots as plt; pythonplot()
 
 include("./tb/TB.jl")
 
@@ -15,3 +16,9 @@ reset_limits!(trx.wvfm.axes[3,2])
 ber = trx.bist.ber_err_cnt/trx.bist.ber_bit_cnt
 println("BER = $ber")
     
+# a = trx.drv.buffer_debug[1000:end];
+# b = u_unwrap_0x(a);
+
+# pa = plt.plot(a, reuse=false); display(pa)
+# pb = plt.plot(b, reuse=false); display(pb)
+# ph = plt.histogram(b .- mean(b), bins = -0.5:0.01:0.5, reuse=false); display(ph)

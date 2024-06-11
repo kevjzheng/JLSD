@@ -12,6 +12,9 @@ function init_plot(wvfm)
     @unpack V12_x, V12_y, V22_x, V22_y = wvfm
     @unpack eye1, eslc_ref_ob = wvfm
 
+    display(wvfm.screen, wvfm.fig)
+
+
     for c = 1:ncol
         for r = 1:nrow
             wvfm.axes[r,c] = Axis(wvfm.fig[r,c])
@@ -78,7 +81,8 @@ function w_plot_test(wvfm; cond = true)
 
             wvfm.eye1.heatmap_ob_trig[] = true
 
-            display(wvfm.fig)
+            
+            display(wvfm.screen, wvfm.fig)
             sleep(.0001)
     end
 

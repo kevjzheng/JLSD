@@ -2,7 +2,7 @@
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "570e380c985c8459f4734739e1f041be4759d191"
+project_hash = "a7f0bf891402637b4295e0df6e2c8012a1976329"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
@@ -798,6 +798,12 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 [[deps.Profile]]
 deps = ["Printf"]
 uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
+
+[[deps.ProfileCanvas]]
+deps = ["Base64", "JSON", "Pkg", "Profile", "REPL"]
+git-tree-sha1 = "e42571ce9a614c2fbebcaa8aab23bbf8865c624e"
+uuid = "efd6af41-a80b-495e-886c-e51b0c7d77a3"
+version = "0.1.6"
 
 [[deps.ProtoStructs]]
 git-tree-sha1 = "18fc867e6190b93289b0cb462f8d4fc5cc281e5e"
