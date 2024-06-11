@@ -74,7 +74,6 @@ end
     rj_s = 0.0
     sj_amp_ui = 0.0
     sj_freq = 0.0
-    last_rj_osr = 0.0
     last_sj_phi = 0.0
 
     Sfir_conv::Vector = zeros(param.blk_size+length(fir)-1)
@@ -85,8 +84,11 @@ end
     prev_nui = 4
     Vext::Vector = zeros(prev_nui*param.osr+param.blk_size_osr)
     V_prev_nui = @views Vext[end-prev_nui*param.osr+1:end]
-    tt_Vext = -prev_nui/2*param.osr:length(Vext)-prev_nui/2*param.osr-1
-    tt_jitter = zeros(param.blk_size_osr)
+    tt_Vext::Vector = zeros(prev_nui*param.osr+param.blk_size_osr)
+    Δtt_ext = zeros(prev_nui+param.blk_size+1)
+    Δtt = zeros(param.blk_size)
+    Δtt_prev_nui = @views Δtt[end-prev_nui:end]
+    tt_uniform::Vector = (0:param.blk_size_osr-1) .+ prev_nui/2*param.osr
 
     Vo_conv::Vector = zeros(param.blk_size_osr+lastindex(ir)-1) 
     Vo = @views Vo_conv[1:param.blk_size_osr] 
