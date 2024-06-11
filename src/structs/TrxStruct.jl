@@ -85,9 +85,9 @@ end
     Vext::Vector = zeros(prev_nui*param.osr+param.blk_size_osr)
     V_prev_nui = @views Vext[end-prev_nui*param.osr+1:end]
     tt_Vext::Vector = zeros(prev_nui*param.osr+param.blk_size_osr)
-    Δtt_ext = zeros(prev_nui+param.blk_size+1)
+    Δtt_ext = zeros(param.blk_size+prev_nui+1)
     Δtt = zeros(param.blk_size)
-    Δtt_prev_nui = @views Δtt[end-prev_nui:end]
+    Δtt_prev_nui = @views Δtt_ext[end-prev_nui:end]
     tt_uniform::Vector = (0:param.blk_size_osr-1) .+ prev_nui/2*param.osr
 
     Vo_conv::Vector = zeros(param.blk_size_osr+lastindex(ir)-1) 
