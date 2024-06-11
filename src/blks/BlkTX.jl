@@ -9,7 +9,8 @@ function dac_drv_top!(drv, Si)
     @unpack ir, fir_norm, swing, Vfir, Sfir_mem, Vo_mem = drv
 
     u_filt!(drv.Sfir_conv, Si, fir_norm, Si_mem = Sfir_mem)
-    Vfir .= kron(drv.Sfir, ones(osr))
+
+    kron!(Vfir, drv.Sfir, ones(osr))
 
     
     if drv.jitter_en
@@ -41,23 +42,20 @@ function drv_add_jitter!(drv, Vfir)
 
     drv_jitter_tvec!(tt_Vext, Δtt_ext, osr)
 
-    itp = interpolate((tt_Vext,), Vext, Gridded(Linear()))
-    Vfir .= itp.(tt_uniform)
-
+    drv_interp_jitter!(Vfir, tt_Vext, Vext, tt_uniform)
     return nothing
 end
 
 
 function drv_jitter_Δt!(Δtt; blk_size, osr, dcd, rj_osr, sj_amp_osr, sj_freq_norm, last_sj_phi)
 
-    Δtt_rj::Vector{Float64} = rj_osr .* randn(blk_size)
-    phi_sj::Vector{Float64} = (last_sj_phi .+ 2 .* π .* sj_freq_norm .* (1:blk_size)).%(2 .* π)
-    Δtt_sj::Vector{Float64} = sj_amp_osr .* sin.(phi_sj)
-
     fill!(Δtt, zero(Float64))
     Δtt[1:2:end] .+= dcd/2*osr
-    Δtt[2:2:end] .+= -dcd/2*osr
-    Δtt .+= Δtt_rj .+ Δtt_sj
+    Δtt[2:2:end] .-= dcd/2*osr
+    Δtt .+= rj_osr .* randn(blk_size) #add rj
+
+    phi_sj = (last_sj_phi .+ 2 .* π .* sj_freq_norm .* (1:blk_size)).%(2 .* π)
+    Δtt .+= sj_amp_osr .* sin.(phi_sj) #add sj
 
     return phi_sj[end]
 end
@@ -65,6 +63,24 @@ end
 function drv_jitter_tvec!(tt_Vext, Δtt_ext, osr)
     for n = 1:lastindex(Δtt_ext)-1
         tt_Vext[(n-1)*osr+1:n*osr] .= LinRange((n-1)*osr+Δtt_ext[n], n*osr+Δtt_ext[n+1], osr+1)[1:end-1]
+    end
+
+    return nothing
+end
+
+
+function drv_interp_jitter!(vo, tt_jitter, vi, tt_uniform)
+    last_idx = 1
+    for n = eachindex(tt_uniform)
+        t = tt_uniform[n]
+        for m = last_idx:lastindex(tt_jitter)-1
+            if (t >= tt_jitter[m]) && (t < tt_jitter[m+1])
+                k = (vi[m+1]-vi[m])/(tt_jitter[m+1]-tt_jitter[m])
+                vo[n] = vi[m] + k*(t-tt_jitter[m])
+                last_idx = m
+                break
+            end
+        end
     end
 
     return nothing

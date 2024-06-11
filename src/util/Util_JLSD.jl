@@ -1,5 +1,5 @@
 module Util_JLSD
-using StatsBase, DSP, Interpolations, FFTW, MAT
+using StatsBase, DSP, Interpolations, FFTW, MAT, LoopVectorization
 
 export u_conv!, u_filt!
 export u_gen_ir_rc, u_fr_to_imp, u_hist, u_find_0x, u_unwrap_0x
@@ -74,7 +74,6 @@ function u_hist(samples, minval, maxval, nbin)
     end
     return weights
 end
-
 
 function u_find_0x(input) #vectorized implementation
     sign_input = sign.(input)
