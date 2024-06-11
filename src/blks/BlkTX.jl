@@ -48,7 +48,8 @@ function drv_jitter_tvec!(tt_jitter; blk_size, osr, dcd, rj_osr, last_rj_osr, sj
     phi_sj::Vector{Float64} = (last_sj_phi .+ 2*π*sj_freq_osr .* tt_ui).%(2*π)
     tt_sj::Vector{Float64} = sj_amp_osr*sin.(phi_sj)
 
-    tt_ui[2:2:end] .+= dcd*osr
+    tt_ui[1:2:end] .+= dcd/2*osr
+    tt_ui[2:2:end] .+= -dcd/2*osr
     tt_ui .+= tt_rj .+ tt_sj
 
     for n = 1:lastindex(tt_ui)-1

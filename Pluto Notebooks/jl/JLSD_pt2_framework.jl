@@ -75,6 +75,12 @@ bw_ir = 8e9;
 # ╔═╡ ca62496a-7f7c-428f-958b-1c317bd0f160
 tlen_ir = 20*tui; #20UI long impulse response
 
+# ╔═╡ c495f9db-3afa-4611-ab17-d9d5952a05b6
+@time Vout1 = conv(ir1, Vbits1)*dt1;
+
+# ╔═╡ c6f7940f-52f6-4bde-82d1-74d95ab066ef
+@time Vout2 = conv(ir2, Vbits2)*dt2;
+
 # ╔═╡ fa545192-e0c3-4188-a980-6cee173f99f5
 md"""
 ### Simulation (sub-)block size
@@ -315,6 +321,20 @@ md"""
 Now let's write a simple run\_sim\_ideal() function to plug all these functions in. In this example, we don't have a sub-block loop, which would make more sense when CDR and adaptation is introduced.
 """
 
+# ╔═╡ 471cadad-a7ae-44ea-aa16-278ca3fdd31d
+@time Vtx = run_sim_ideal(32, 128, Int(1e6));
+#play around with the osr and blk_size parameters and see how the run time is impacted
+
+# ╔═╡ 8cc4b284-c473-4b83-9871-4ffefbba492e
+begin
+#plotting. We will learn more Makie plots later
+fig_tx = Figure()
+ax_tx = Axis(fig_tx[1,1])
+lines!(ax_tx,Vtx, label = "TX output")
+axislegend()
+fig_tx
+end
+
 # ╔═╡ 920279e2-760f-491a-bacc-f563c4f59c68
 md"""
 Congratulations! We have just built your first SerDes model. I admit that this model isn't that useful, and the code itself is not looking that pretty. Trust me, it will get better 🙂.
@@ -384,20 +404,6 @@ function run_sim_ideal(osr, blk_size, nsym_tot)
 	return Vtx
 end
 
-# ╔═╡ 471cadad-a7ae-44ea-aa16-278ca3fdd31d
-@time Vtx = run_sim_ideal(32, 128, Int(1e6));
-#play around with the osr and blk_size parameters and see how the run time is impacted
-
-# ╔═╡ 8cc4b284-c473-4b83-9871-4ffefbba492e
-begin
-#plotting. We will learn more Makie plots later
-fig_tx = Figure()
-ax_tx = Axis(fig_tx[1,1])
-lines!(ax_tx,Vtx, label = "TX output")
-axislegend()
-fig_tx
-end
-
 # ╔═╡ 30c55f3a-c070-405b-b70b-23f017d31f87
 md"""
 !!! info "Julia tips"
@@ -462,6 +468,17 @@ axislegend()
 fig
 end
 
+# ╔═╡ 609b8929-e9a2-477d-bbd6-8fdbfb63be6c
+begin
+#plotting. We will learn more Makie plots later
+fig2 = Figure()
+ax2 = Axis(fig2[1,1])
+lines!(ax2, tt1, Vout1[1:length(Vbits1)], label = "osr=4")
+lines!(ax2, tt2, Vout2[1:length(Vbits2)], label = "osr=32")
+axislegend()
+fig2
+end
+
 # ╔═╡ 7cae8f4e-2c32-4edc-9de8-d3411ff632ff
 md"""
 !!! info "Julia tips"
@@ -484,25 +501,8 @@ end
 # ╔═╡ 5834ebea-c215-4da8-b5de-14a4349177ee
 ir1 = gen_ir_rc(dt1, bw_ir, tlen_ir);
 
-# ╔═╡ c495f9db-3afa-4611-ab17-d9d5952a05b6
-@time Vout1 = conv(ir1, Vbits1)*dt1;
-
 # ╔═╡ e5f3b3e4-5db3-4343-97ad-0407f02fef49
 ir2 = gen_ir_rc(dt2, bw_ir, tlen_ir);
-
-# ╔═╡ c6f7940f-52f6-4bde-82d1-74d95ab066ef
-@time Vout2 = conv(ir2, Vbits2)*dt2;
-
-# ╔═╡ 609b8929-e9a2-477d-bbd6-8fdbfb63be6c
-begin
-#plotting. We will learn more Makie plots later
-fig2 = Figure()
-ax2 = Axis(fig2[1,1])
-lines!(ax2, tt1, Vout1[1:length(Vbits1)], label = "osr=4")
-lines!(ax2, tt2, Vout2[1:length(Vbits2)], label = "osr=32")
-axislegend()
-fig2
-end
 
 # ╔═╡ 5f98a625-e315-4846-a121-ad0a5dca6fd8
 md"""

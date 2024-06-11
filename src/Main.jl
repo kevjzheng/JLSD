@@ -18,7 +18,11 @@ println("BER = $ber")
     
 # a = trx.drv.buffer_debug[1000:end];
 # b = u_unwrap_0x(a);
+# c = u_hist(b.-mean(b), -0.5:0.001:0.5)
 
-# pa = plt.plot(a, reuse=false); display(pa)
-# pb = plt.plot(b, reuse=false); display(pb)
-# ph = plt.histogram(b .- mean(b), bins = -0.5:0.01:0.5, reuse=false); display(ph)
+# f1 = w_newfig()
+# lines!(Axis(f1[1,1]),a)
+# lines!(Axis(f1[1,2]),b)
+# density!(Axis(f1[1,3]),b .- mean(b))
+
+

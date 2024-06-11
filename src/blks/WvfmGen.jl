@@ -1,10 +1,11 @@
 module WvfmGen
-using UnPack, Interpolations, LoopVectorization
+using UnPack, Interpolations
 using GLMakie, Makie, Printf
 include("../util/Util_JLSD.jl"); using .Util_JLSD
 
 
 export init_plot, w_plot_test, w_plot_test2, w_eye_gen_heatmap, update_eye
+export w_newfig
 
 function init_plot(wvfm)
     @unpack nrow, ncol, sizex, sizey = wvfm
@@ -88,6 +89,22 @@ function w_plot_test(wvfm; cond = true)
 
 end
 
+function w_gen_eye_simple(input,x_npts_ui, x_npts, y_range, y_npts; osr, x_ofst=0)
+    heatmap = zeros(x_npts, y_npts)
+
+    input_x = 0:1/osr:(lastindex(input)-1)/osr
+    itp_resample = linear_interpolation(input_x, input)
+    idx_itp = 0:1/x_npts_ui:input_x[end]
+    input_itp = itp_resample.(idx_itp)
+
+    for n = 1:x_npts
+        heatmap[n,:] = u_hist(input_itp[n:x_npts:end], -y_range/2, y_range/2, y_npts)
+    end
+   
+    return circshift(heatmap, (Int(x_ofst), 0))
+
+end
+
 function w_eye_gen_heatmap(heatmap_ob_trig, eye)
     if heatmap_ob_trig
         @unpack osr, tui = eye.param
@@ -100,8 +117,6 @@ function w_eye_gen_heatmap(heatmap_ob_trig, eye)
         y_npts_val = y_npts.val
         y_range_val = y_range.val
 
-        heatmap = zeros(x_npts_val, y_npts_val)
-        
         if ~isempty(clk_skews) | (clk_rj > 0.0)
             #add 1UI in front and back
             buffer_x = 0:buffer_plt_len+2*osr-1
@@ -125,16 +140,7 @@ function w_eye_gen_heatmap(heatmap_ob_trig, eye)
             buffer_resample = buffer[1:buffer_plt_len] #leaves 1UI in front and back
         end
 
-        buffer_resample_x = 0:1/osr:(lastindex(buffer_resample)-1)/osr
-        itp_resample = linear_interpolation(buffer_resample_x, buffer_resample)
-        idx_itp = 0:1/x_npts_ui_val:buffer_resample_x[end]
-        buffer_resample_itp = itp_resample.(idx_itp) .+ noise_rms*randn(lastindex(idx_itp))
-
-        for n = 1:x_npts_val
-            heatmap[n,:] = u_hist(buffer_resample_itp[n:x_npts_val:end], -y_range_val/2, y_range_val/2, y_npts_val)
-        end
-       
-        return circshift(heatmap, (Int(eye.x_ofst), 0))
+        return w_gen_eye_simple(buffer_resample, x_npts_ui_val, x_npts_val, y_range_val, y_npts_val, osr=osr, x_ofst=eye.x_ofst)
     end
 end
 
@@ -144,6 +150,16 @@ function update_eye(eye; x_nui, x_npts_ui, y_npts, x_ofst_ui)
     eye.x_npts_ui[] = x_npts_ui
     eye.y_npts[] = y_npts
     eye.heatmap_ob_trig[] = true
+end
+
+
+
+function w_newfig()
+    s = GLMakie.Screen()
+    f = Figure()
+    display(s,f)
+    DataInspector(f)
+    return f
 end
 
 

@@ -22,9 +22,21 @@ function u_conv!(Vo_conv, input, ir; Vi_mem = Float64[], gain = 1)
     return nothing
 end
 
+function u_filt(So_conv, input, fir; Si_mem=Float64[])
+    sconv = zeros(length(input) + length(fir) - 1)
 
+    s_in = lastindex(input)
+    
+    for n=eachindex(fir)
+        sconv[n:s_in+n-1] .+= fir[n] .* input
+    end
 
-function u_filt!(So_conv, input, fir; Si_mem)
+    sconv[eachindex(Si_mem)] .+= Si_mem
+
+    return sconv
+end
+
+function u_filt!(So_conv, input, fir; Si_mem=Float64[])
     So_conv[eachindex(Si_mem)] .= Si_mem
     So_conv[lastindex(Si_mem)+1:end] .= zero(Float64)
     s_in = lastindex(input)
@@ -153,3 +165,4 @@ function u_fr_to_imp(filename, Tsym, osr; npre=50, npost=200, savename = "", fre
 end
 
 end
+
