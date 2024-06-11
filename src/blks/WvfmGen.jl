@@ -158,7 +158,6 @@ function w_newfig()
     s = GLMakie.Screen()
     f = Figure()
     display(s,f)
-    DataInspector(f)
     return f
 end
 

@@ -18,12 +18,11 @@ println("BER = $ber")
     
 # a = trx.drv.buffer_debug[1000:end];
 # b = u_unwrap_0x(a);
-# c = u_hist(b.-mean(b), -0.5:0.001:0.5)
 
 # f1 = w_newfig()
 # lines!(Axis(f1[1,1]),a)
 # lines!(Axis(f1[1,2]),b)
-# density!(Axis(f1[1,3]),b .- mean(b))
+# density!(Axis(f1[1,3]), b .- mean(b), boundary=(-0.1,0.1), npoints=200)
 
 
  

@@ -37,7 +37,7 @@ function init_trx()
                 dcd = 0.03,
                 rj_s = 300e-15,
                 sj_amp_ui = 0.2,
-                sj_freq = 1e5)
+                sj_freq = 2e5)
 
     #AWGN ch param
     ch = TrxStruct.Ch(
@@ -111,7 +111,7 @@ function run_sim_blk(trx)
 
     dac_drv_top!(drv, bist.So)
 
-    append!(drv.buffer_debug, mod.(u_find_0x(drv.Vo), param.osr) ./ param.osr)
+    # append!(drv.buffer_debug, mod.(u_find_0x(drv.Vo), param.osr) ./ param.osr)
     
     ch_top!(ch, drv.Vo)
 
