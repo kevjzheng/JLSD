@@ -1,6 +1,6 @@
 using GLMakie, Makie
 using UnPack, Random, Interpolations
-include("../structs/TrxStruct.jl");
+include("../structs/TrxStruct.jl"); #using .TrxStruct
 includet("../util/Util_JLSD.jl"); using .Util_JLSD
 includet("../blks/BlkBIST.jl"); using .BlkBIST
 includet("../blks/BlkTX.jl"); using .BlkTX
@@ -36,8 +36,8 @@ function init_trx()
                 jitter_en = true,
                 dcd = 0.03,
                 rj_s = 300e-15,
-                sj_amp_ui = 0.2,
-                sj_freq = 2e5)
+                sj_amp_ui = 0.1,
+                sj_freq = 5e5)
 
     #AWGN ch param
     ch = TrxStruct.Ch(
@@ -65,13 +65,17 @@ function init_trx()
                 param = param,
                 N_per_phi = ones(UInt8, clkgen.nphases),
                 noise_rms = 1.5e-3,
-                ofst_std = 7e-3)
+                ofst_std = 7e-3,
+                dac_min = -0.1,
+                dac_max = 0.1)
 
     eslc = TrxStruct.Slicers(
                 param = param,
                 N_per_phi = UInt8.([1,0,0,0]),
                 noise_rms = 1.5e-3,
-                ofst_std = 7e-3)
+                ofst_std = 7e-3,
+                dac_min = 0,
+                dac_max = 0.5)
 
     cdr = TrxStruct.Cdr(
                 param = param,
@@ -124,7 +128,7 @@ function run_sim_blk(trx)
         
         sample_phi_top!(splr, clkgen.Φo)
 
-        slicers_top!(dslc, splr.So_subblk, ref_code=[[0],[0],[0],[0]])
+        slicers_top!(dslc, splr.So_subblk, ref_code=[[128],[128],[128],[128]])
         slicers_top!(eslc, splr.So_subblk, ref_code=adpt.eslc_ref_vec)
 
         cdr_top!(cdr, dslc.So, eslc.So)

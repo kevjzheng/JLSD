@@ -1,5 +1,5 @@
 module Util_JLSD
-using StatsBase, DSP, Interpolations, FFTW, MAT, LoopVectorization
+using StatsBase, DSP, Interpolations, FFTW, MAT
 
 export u_conv!, u_filt!
 export u_gen_ir_rc, u_fr_to_imp, u_hist, u_find_0x, u_unwrap_0x
@@ -21,6 +21,8 @@ function u_conv!(Vo_conv, input, ir; Vi_mem = Float64[], gain = 1)
     Vo_conv .+= conv(gain .* input, ir)
     return nothing
 end
+
+
 
 function u_filt(So_conv, input, fir; Si_mem=Float64[])
     sconv = zeros(length(input) + length(fir) - 1)
@@ -89,7 +91,7 @@ end
 function u_unwrap_0x(xpts; tol_Δui = 0.5) #assumes 0-1UI range, vectorized
     nwrap = 0
     xpts_unwrap = zeros(lastindex(xpts))
-    
+    xpts_unwrap[1] = xpts[1]
     ΔΦ = @views xpts[1:end-1] .- xpts[2:end]
 
     nwrap = cumsum( (abs.(ΔΦ) .> tol_Δui) .* sign.(ΔΦ))
@@ -162,8 +164,6 @@ function u_fr_to_imp(filename, Tsym, osr; npre=50, npost=200, savename = "", fre
     close(data)
     return u_fr_to_imp(fr, H, Tsym, osr, npre=npre, npost=npost, savename = savename)
 end
-
-
 
 
 end

@@ -1,5 +1,5 @@
 module TrxStruct
-using Parameters, DataStructures
+using Parameters, DataStructures, DSP, FFTW
 using GLMakie, Makie
 
 

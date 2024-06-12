@@ -10,14 +10,14 @@ function dac_drv_top!(drv, Si)
 
     u_filt!(drv.Sfir_conv, Si, fir_norm, Si_mem = Sfir_mem)
 
-    kron!(Vfir, drv.Sfir, ones(osr))
+    kron!(drv.Vfir, drv.Sfir, ones(osr))
 
-    
     if drv.jitter_en
-        drv_add_jitter!(drv, Vfir)
+        drv_add_jitter!(drv, drv.Vfir)
     end
 
-    u_conv!(drv.Vo_conv, Vfir, ir, Vi_mem=Vo_mem, gain=dt*swing/2)
+    u_conv!(drv.Vo_conv, drv.Vfir, ir, Vi_mem=Vo_mem, gain=dt*swing/2)
+
 
 end
 
@@ -54,7 +54,7 @@ function drv_jitter_Δt!(Δtt; blk_size, osr, dcd, rj_osr, sj_amp_osr, sj_freq_n
     Δtt[2:2:end] .-= dcd/2*osr
     Δtt .+= rj_osr .* randn(blk_size) #add rj
 
-    phi_sj = (last_sj_phi .+ 2 .* π .* sj_freq_norm .* (1:blk_size)).%(2 .* π)
+    phi_sj = (last_sj_phi .+ (2π*sj_freq_norm) * (1:blk_size)) .% (2π)
     Δtt .+= sj_amp_osr .* sin.(phi_sj) #add sj
 
     return phi_sj[end]

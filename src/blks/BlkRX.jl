@@ -58,14 +58,17 @@ function slicers_top!(slc, Si; ref_code)
     @unpack nphases, noise_rms, dac_min, dac_lsb = slc
     @unpack ofsts, N_per_phi = slc
 
+    ref_lvl = [(dac_min .+ dac_lsb * ref_code[n]) for n in 1:nphases]
+
     for n = eachindex(Si)
         phi_idx = (n-1)%nphases + 1
         nslc = N_per_phi[phi_idx]
-
         if nslc != 0
-            slc.So[n] .= (Si[n]  .- (dac_min .+ dac_lsb .* ref_code[phi_idx])
-                                .+ ofsts[phi_idx] 
-                                .+ noise_rms .* randn(nslc)) .> 0
+            slc.So[n] .=  (ref_lvl[phi_idx]
+                            + ofsts[phi_idx]
+                            + (noise_rms * randn(nslc))
+                            ) .< Si[n] 
+
         end
     end
 end
