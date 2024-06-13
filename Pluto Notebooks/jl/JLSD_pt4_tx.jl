@@ -4,6 +4,16 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 907c712d-8fc0-49ac-9c72-ae53f8c78794
 using StatsBase, DSP, Interpolations, FFTW, MAT
 
@@ -14,7 +24,7 @@ using Parameters, DataStructures
 using UnPack, Random, Distributions, BenchmarkTools
 
 # ╔═╡ a2334355-f50c-456f-8a51-578885f07528
-using GLMakie, Makie
+using GLMakie, Makie, PlutoUI
 
 # ╔═╡ 0f491d87-d14a-4bfe-8a2d-821797926590
 include("../../src/structs/TrxStruct.jl");
@@ -374,6 +384,19 @@ md"""
 Now let's apply some FIR to open up the eye. Here we will use the non-mutating functions to maintain the states of the drv struct above.
 """
 
+# ╔═╡ f96baca0-637c-4b02-855d-d758121fa96e
+md"""
+Driver bandwidth: $(@bind drv_bw PlutoUI.Slider(1e9:0.5e9:10e9, 10e9, true))
+
+Post tap value: $(@bind posttap PlutoUI.Slider(-0.5:0.02:0, 0.0, true) )
+"""
+
+# ╔═╡ 01549352-1220-4e5b-ae1f-143a5bcada0c
+fir_coeffs = [1.0, posttap];
+
+# ╔═╡ bfee37c6-fa4c-4e08-9b76-cfa298fff745
+fir_coeffs_norm = fir_coeffs ./ sum(abs.(fir_coeffs));
+
 # ╔═╡ c67fbbff-19e3-4ffd-bafd-d934e4882268
 md"""
 Cool! Actually, that was the easy part. Because we have defined a good ```drv``` struct and had clever uses of ```views```, the functions seem quite straightforward and gave us interesting results to play with immediately. 
@@ -476,6 +499,20 @@ md"""
 # ╔═╡ d8da233c-81ef-4916-88e3-2b9b0fac5a57
 md"""
 To summarize and not interfere with previous codes in the notebook, you can play around with the code cell below to see how the jittered eye diagram change.
+"""
+
+# ╔═╡ 690ea232-0ef4-45ab-a158-6ff355d8101f
+md"""
+Parameters for you to play around with
+
+DCD: $(@bind dcd PlutoUI.Slider(0:0.01:0.1, 0.0, true))
+
+RJ (seconds): $(@bind rj_s PlutoUI.Slider(0:500e-15:5e-12, 0.0, true))
+
+SJ amplitude (UI): $(@bind sj_amp_ui PlutoUI.Slider(0:0.02:0.3, 0.0, true))
+
+SJ frequency (Hertz): $(@bind sj_freq PlutoUI.Slider(0:200e3:10e6, 2e6, true))
+
 """
 
 # ╔═╡ 0c05c7de-ff91-4927-8f8e-44340f014d55
@@ -678,14 +715,11 @@ f1
 end
 
 # ╔═╡ 2a9645ac-a66e-4133-8dc7-2b455e0473f5
-s_filt = u_filt(bist.So, [1, -0.2]); 
+s_filt = u_filt(bist.So, fir_coeffs_norm); 
 #change the FIR filter here to see the eye change reactively!
 
 # ╔═╡ 0984e74f-c480-4aac-b429-fae9d10afd6d
 Vosr_filt = kron(s_filt, ones(param.osr));
-
-# ╔═╡ 5f137628-6545-4a08-a6ae-6d5f1bdd1241
-Vo_filt_conv = u_conv(Vosr_filt, drv.ir, gain = drv.swing * param.dt);
 
 # ╔═╡ d3f0e565-51c3-497d-bd59-b0acb842e402
 Δtt = zeros(param.blk_size); #clean slate no jitter for all symbols
@@ -744,6 +778,12 @@ tt_uniform = (0:param.blk_size_osr-1) .+ drv.prev_nui/2*param.osr;
 Vosr_jittered = itp.(tt_uniform); 
 #To interpolate, use the itp object like a function and broadcast to a vector
 
+# ╔═╡ a6919863-c211-4524-8cad-3e0845764625
+drv_ir = u_gen_ir_rc(param.dt, drv_bw, 100*param.tui);
+
+# ╔═╡ 5f137628-6545-4a08-a6ae-6d5f1bdd1241
+Vo_filt_conv = u_conv(Vosr_filt, drv_ir, gain = drv.swing * param.dt);
+
 # ╔═╡ d2a72861-e320-4547-885e-5ebe88473f9e
 import .BlkBIST: pam_gen_top!
 
@@ -782,6 +822,89 @@ heatmap!(Axis(feye_filt[1,1]), x_grid, y_grid, eye_tx_filt,
             colormap=:turbo, #try :inferno, :hot, :viridis
         )
 feye_filt
+end
+
+# ╔═╡ cd5e4ece-3614-469c-9193-72b2d0590444
+begin
+#unit conversion
+rj_osr1 = rj_s/param.tui*param.osr
+sj_amp_osr1 = sj_amp_ui*param.osr
+sj_freq_norm1 = sj_freq*param.tui
+
+Δtt1 = zeros(param.blk_size);
+Δtt1[1:2:end] .+= dcd/2*param.osr;
+Δtt1[2:2:end] .-= dcd/2*param.osr;  #add dcd
+Δtt1 .+= rj_osr1 .* randn(param.blk_size); #add rj
+phi_sj1 = (0.0 .+ (2π*sj_freq_norm1) * (1:param.blk_size)) .% (2π);
+Δtt1 .+= sj_amp_osr1 .* sin.(phi_sj1); #add sj
+
+#gen jittered time
+drv.Δtt_ext[eachindex(drv.Δtt_prev_nui)] .= drv.Δtt_prev_nui
+drv.Δtt_ext[lastindex(drv.Δtt_prev_nui)+1:end] .= Δtt1
+drv_jitter_tvec!(drv.tt_Vext, drv.Δtt_ext, param.osr);
+#voltage
+drv.Vext[eachindex(drv.V_prev_nui)] .= drv.V_prev_nui
+drv.Vext[lastindex(drv.V_prev_nui)+1:end] .= Vosr 
+
+#interpolate and remap to simulation grid. 
+#compare and see the speed difference between the custom interpolation and the built-in one when you know the problem
+Vosr_jit1 = Vector{Float64}(undef, length(tt_uniform))
+# @time begin
+itp1 = linear_interpolation(drv.tt_Vext, drv.Vext); #itp is a function object
+Vosr_jit1 = itp1.(tt_uniform); 
+# end
+# @time drv_interp_jitter!(Vosr_jit1, drv.tt_Vext, drv.Vext, tt_uniform)
+	
+#convolve with ir
+ir_high_bw = u_gen_ir_rc(param.dt, param.fbaud, 20*param.tui);
+Vo_jit1 = u_conv(Vosr_jit1, ir_high_bw, gain = drv.swing * param.dt);
+Vo_jit1_trunc = @views Vo_jit1[100*param.osr:end-100*param.osr]; #trim off some garbarge for now
+
+eye_tx_jit = w_gen_eye_simple(Vo_jit1_trunc,
+						x_npts_ui*2, x_npts_ui*2, 
+						y_range, y_npts, 
+						osr= param.osr, x_ofst=round(2*x_npts_ui/3));
+#To see duty cycle effect better, here the eye diagram is plotted over just 1UI
+end;
+
+# ╔═╡ 9c3a3512-3ce2-45a0-a645-899eeed433f2
+begin
+cm = cgrad([:white, :blue, :red], [0.00001, 0.05], scale=:exp) 
+#custom colormap for better visualization of jitter
+feye_jit = Figure()
+heatmap!(Axis(feye_jit[1,1]), x_grid, y_grid, eye_tx_jit, 
+            colormap=cm, #try :inferno, :hot, :viridis
+        )
+feye_jit
+end
+
+# ╔═╡ 72e099af-d0b6-45c0-8106-7746eb2a3a2d
+jit_0x = mod.(u_find_0x(Vo_jit1_trunc), param.osr) ./ param.osr;
+#find zero crossing and normalize to within 1UI
+
+# ╔═╡ 34895f52-6a85-4f03-9177-ad8432df125f
+begin
+f0x = Figure()
+lines!(Axis(f0x[1,1]), jit_0x)
+f0x
+end
+
+# ╔═╡ 09de39c9-7290-4cbc-ab8b-1343ab68abe1
+jit_0x_unwrap = u_unwrap_0x(jit_0x);
+
+# ╔═╡ 8b91cf27-e7e8-48a9-9104-3370d1095a4c
+begin
+f0x_uw = Figure()
+lines!(Axis(f0x_uw[1,1]), jit_0x_unwrap)
+f0x_uw
+end
+
+# ╔═╡ f8abc19c-ce00-43b6-b1b9-b34151c27d0b
+begin
+jitter_bnd = (-0.05,0.05) .+ (-6, 6).*(rj_s/param.tui) .+ (-1.2, 1.2).*sj_amp_ui
+fd = Figure()
+	density!(Axis(fd[1,1]), jit_0x_unwrap .- mean(jit_0x_unwrap), boundary=jitter_bnd, npoints=200)
+fd
 end
 
 # ╔═╡ 53870af8-fd88-4f1a-b053-c409f92dfe98
@@ -882,94 +1005,6 @@ function drv_interp_jitter!(vo, tt_jitter, vi, tt_uniform)
     return nothing
 end
 
-# ╔═╡ cd5e4ece-3614-469c-9193-72b2d0590444
-begin
-#parameters for you to play around with
-dcd = 0.05;
-rj_s = 1000e-15;
-sj_amp_ui = 0.02;
-sj_freq = 10e6;
-	
-#unit conversion
-rj_osr1 = rj_s/param.tui*param.osr
-sj_amp_osr1 = sj_amp_ui*param.osr
-sj_freq_norm1 = sj_freq*param.tui
-
-Δtt1 = zeros(param.blk_size);
-Δtt1[1:2:end] .+= dcd/2*param.osr;
-Δtt1[2:2:end] .-= dcd/2*param.osr;  #add dcd
-Δtt1 .+= rj_osr1 .* randn(param.blk_size); #add rj
-phi_sj1 = (0.0 .+ (2π*sj_freq_norm1) * (1:param.blk_size)) .% (2π);
-Δtt1 .+= sj_amp_osr1 .* sin.(phi_sj1); #add sj
-
-#gen jittered time
-drv.Δtt_ext[eachindex(drv.Δtt_prev_nui)] .= drv.Δtt_prev_nui
-drv.Δtt_ext[lastindex(drv.Δtt_prev_nui)+1:end] .= Δtt1
-drv_jitter_tvec!(drv.tt_Vext, drv.Δtt_ext, param.osr);
-#voltage
-drv.Vext[eachindex(drv.V_prev_nui)] .= drv.V_prev_nui
-drv.Vext[lastindex(drv.V_prev_nui)+1:end] .= Vosr 
-
-#interpolate and remap to simulation grid. 
-#compare and see the speed difference between the custom interpolation and the built-in one when you know the problem
-Vosr_jit1 = Vector{Float64}(undef, length(tt_uniform))
-@time begin
-itp1 = linear_interpolation(drv.tt_Vext, drv.Vext); #itp is a function object
-Vosr_jit1 = itp1.(tt_uniform); 
-end
-@time drv_interp_jitter!(Vosr_jit1, drv.tt_Vext, drv.Vext, tt_uniform)
-	
-#convolve with ir
-ir_high_bw = u_gen_ir_rc(param.dt, param.fbaud, 20*param.tui);
-Vo_jit1 = u_conv(Vosr_jit1, ir_high_bw, gain = drv.swing * param.dt);
-Vo_jit1_trunc = @views Vo_jit1[100*param.osr:end-100*param.osr]; #trim off some garbarge for now
-end;
-
-# ╔═╡ 2ea1a194-9e97-44f4-8d24-232324458208
-eye_tx_jit = w_gen_eye_simple(Vo_jit1_trunc,
-							x_npts_ui, x_npts_ui, 
-							y_range, y_npts, 
-							osr= param.osr, x_ofst=round(x_npts_ui/3));
-#To see duty cycle effect better, here the eye diagram is plotted over just 1UI
-
-# ╔═╡ 9c3a3512-3ce2-45a0-a645-899eeed433f2
-begin
-feye_jit = Figure()
-heatmap!(Axis(feye_jit[1,1]), x_grid, y_grid, eye_tx_jit, 
-            colormap=:turbo, #try :inferno, :hot, :viridis
-        )
-feye_jit
-end
-
-# ╔═╡ 72e099af-d0b6-45c0-8106-7746eb2a3a2d
-jit_0x = mod.(u_find_0x(Vo_jit1_trunc), param.osr) ./ param.osr;
-#find zero crossing and normalize to within 1UI
-
-# ╔═╡ 34895f52-6a85-4f03-9177-ad8432df125f
-begin
-f0x = Figure()
-lines!(Axis(f0x[1,1]), jit_0x)
-f0x
-end
-
-# ╔═╡ 09de39c9-7290-4cbc-ab8b-1343ab68abe1
-jit_0x_unwrap = u_unwrap_0x(jit_0x);
-
-# ╔═╡ 8b91cf27-e7e8-48a9-9104-3370d1095a4c
-begin
-f0x_uw = Figure()
-lines!(Axis(f0x_uw[1,1]), jit_0x_unwrap)
-f0x_uw
-end
-
-# ╔═╡ f8abc19c-ce00-43b6-b1b9-b34151c27d0b
-begin
-jitter_bnd = (-0.05,.05) .+ (-6, 6).*(rj_s/param.tui) .+ (-1.2, 1.2).*sj_amp_ui
-fd = Figure()
-	density!(Axis(fd[1,1]), jit_0x_unwrap .- mean(jit_0x_unwrap), boundary=jitter_bnd, npoints=100)
-fd
-end
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -983,6 +1018,7 @@ Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
@@ -998,6 +1034,7 @@ Interpolations = "~0.15.1"
 MAT = "~0.10.6"
 Makie = "~0.21.0"
 Parameters = "~0.12.3"
+PlutoUI = "~0.7.59"
 StatsBase = "~0.34.3"
 UnPack = "~1.0.2"
 """
@@ -1008,7 +1045,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "fa3957dd2ffde4eb1160dcc9cb97e5ba1fde5249"
+project_hash = "b7da7bf1c081688b2d963514112c93746db8e83d"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1020,6 +1057,12 @@ weakdeps = ["ChainRulesCore", "Test"]
     [deps.AbstractFFTs.extensions]
     AbstractFFTsChainRulesCoreExt = "ChainRulesCore"
     AbstractFFTsTestExt = "Test"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.3.2"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -1484,6 +1527,24 @@ git-tree-sha1 = "f218fe3736ddf977e0e772bc9a586b2383da2685"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.23"
 
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.5"
+
+[[deps.HypertextLiteral]]
+deps = ["Tricks"]
+git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.5"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "8b72179abc660bfab5e28472e019392b97d0985c"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.4"
+
 [[deps.ImageAxes]]
 deps = ["AxisArrays", "ImageBase", "ImageCore", "Reexport", "SimpleTraits"]
 git-tree-sha1 = "2e4520d67b0cef90865b3ef727594d2a58e0e1f8"
@@ -1758,6 +1819,11 @@ git-tree-sha1 = "ed1cf0a322d78cee07718bed5fd945e2218c35a1"
 uuid = "23992714-dd62-5051-b70f-ba57cb901cac"
 version = "0.10.6"
 
+[[deps.MIMEs]]
+git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
+uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
+version = "0.1.4"
+
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
 git-tree-sha1 = "80b2833b56d466b3858d565adcd16a4a05f2089b"
@@ -2007,6 +2073,12 @@ deps = ["ColorSchemes", "Colors", "Dates", "PrecompileTools", "Printf", "Random"
 git-tree-sha1 = "7b1a9df27f072ac4c9c7cbe5efb198489258d1f5"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
 version = "1.4.1"
+
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
+git-tree-sha1 = "ab55ee1510ad2af0ff674dbcced5e94921f867a9"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.59"
 
 [[deps.PolygonOps]]
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
@@ -2329,10 +2401,20 @@ weakdeps = ["Random", "Test"]
     [deps.TranscodingStreams.extensions]
     TestExt = ["Test", "Random"]
 
+[[deps.Tricks]]
+git-tree-sha1 = "eae1bb484cd63b36999ee58be2de6c178105112f"
+uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
+version = "0.1.8"
+
 [[deps.TriplotBase]]
 git-tree-sha1 = "4d4ed7f294cda19382ff7de4c137d24d16adc89b"
 uuid = "981d1d27-644d-49a2-9326-4793e63143c3"
 version = "0.1.0"
+
+[[deps.URIs]]
+git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
+uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+version = "1.5.1"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -2598,6 +2680,10 @@ version = "3.5.0+0"
 # ╠═91469577-cb17-4505-bdcd-bafce396d564
 # ╠═4651d7ef-3d52-4275-a0ce-13051d1a1cdf
 # ╟─03ec64bb-7bb7-4e7f-9b4e-00ec713d739c
+# ╟─f96baca0-637c-4b02-855d-d758121fa96e
+# ╠═a6919863-c211-4524-8cad-3e0845764625
+# ╠═01549352-1220-4e5b-ae1f-143a5bcada0c
+# ╠═bfee37c6-fa4c-4e08-9b76-cfa298fff745
 # ╠═2a9645ac-a66e-4133-8dc7-2b455e0473f5
 # ╠═0984e74f-c480-4aac-b429-fae9d10afd6d
 # ╠═5f137628-6545-4a08-a6ae-6d5f1bdd1241
@@ -2638,7 +2724,7 @@ version = "3.5.0+0"
 # ╟─a9785c06-83d2-46a4-aec1-63d0644c19df
 # ╟─d8da233c-81ef-4916-88e3-2b9b0fac5a57
 # ╠═cd5e4ece-3614-469c-9193-72b2d0590444
-# ╠═2ea1a194-9e97-44f4-8d24-232324458208
+# ╟─690ea232-0ef4-45ab-a158-6ff355d8101f
 # ╟─9c3a3512-3ce2-45a0-a645-899eeed433f2
 # ╟─0c05c7de-ff91-4927-8f8e-44340f014d55
 # ╟─6d5ddcaf-bab8-44d8-a2f9-9a90bbe25fdf
@@ -2649,7 +2735,7 @@ version = "3.5.0+0"
 # ╠═09de39c9-7290-4cbc-ab8b-1343ab68abe1
 # ╟─8b91cf27-e7e8-48a9-9104-3370d1095a4c
 # ╟─24be3bdb-c3db-42ab-b2ef-c313b7108ff8
-# ╟─f8abc19c-ce00-43b6-b1b9-b34151c27d0b
+# ╠═f8abc19c-ce00-43b6-b1b9-b34151c27d0b
 # ╟─78de21b5-984b-4e1f-9759-dfef88885c48
 # ╟─1dfc2b52-1749-4782-9c5b-7c3289069803
 # ╠═bb39273b-820f-472a-a6ae-c6ed9094044f
