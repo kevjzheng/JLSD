@@ -23,7 +23,7 @@ println("BER = $ber")
 # f1 = w_newfig()
 # # lines!(Axis(f1[1,1]),a)
 # lines!(Axis(f1[1,1]),b)
-# jitter_bnd = (-6, 6).*(trx.drv.rj_s/trx.param.tui) .+ (-1.2, 1.2).*trx.drv.sj_amp_ui
+# jitter_bnd = (-0.1,0.1).+(-6, 6).*(trx.drv.rj_s/trx.param.tui) .+ (-1.2, 1.2).*trx.drv.sj_amp_ui
 # density!(Axis(f1[1,2]), b .- mean(b), boundary=jitter_bnd, npoints=200)
 
 

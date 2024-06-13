@@ -5,6 +5,16 @@ using GLMakie, Makie
 
 export Param, Bist, Drv, Ch, Clkgen, Splr, Slicers, Cdr, Adpt, Eye, Wvfm
 
+
+const PRBS7 = [6, 7]
+const PRBS9 = [5, 9]
+const PRBS11 = [9, 11]
+const PRBS13 = [9, 10, 12, 13]
+const PRBS15 = [14, 15]
+const PRBS23 = [18,23]
+const PRBS31 = [28,31]
+
+
 @kwdef mutable struct Param
     const data_rate::Float64
     const osr::Int64
@@ -48,11 +58,13 @@ end
     chk_lock_cnt_threshold = 128 
     ber_err_cnt = 0
     ber_bit_cnt = 0
+    ref_bits::Vector = zeros(Bool, param.bits_per_sym*param.blk_size)
 
     So_bits::Vector = zeros(Bool, param.bits_per_sym*param.blk_size)
     So::Vector = zeros(param.blk_size)
     Si = CircularBuffer{UInt8}(param.blk_size)
     Si_bits::Vector = zeros(Bool, param.bits_per_sym*param.blk_size)
+
 end
 
 
@@ -183,7 +195,7 @@ end
 
     tt_Vext = -prev_nui/2*param.osr:length(Vext)-prev_nui/2*param.osr-1
 
-    So::Vector = CircularBuffer{Float64}(param.blk_size)
+    So = CircularBuffer{Float64}(param.blk_size)
     So_subblk::Vector = zeros(param.subblk_size)
     itp_Vext = nothing
 end
@@ -284,11 +296,11 @@ end
     ncol::Int8 = 2
     axes::Array = Array{Axis}(undef,nrow,ncol)
 
-    buffer11 = CircularBuffer{Float64}(8192)
+    buffer11 = CircularBuffer{Float64}(256*param.osr)
     # buffer12 = CircularBuffer{Float64}(2^16)
     buffer12 = Float64[]
 
-    buffer21 = CircularBuffer{Float64}(8192)
+    buffer21 = CircularBuffer{Float64}(256*param.osr)
     # buffer22 = CircularBuffer{Float64}(2^16)
     buffer22 = Float64[]
 

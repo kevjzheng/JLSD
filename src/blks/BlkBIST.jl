@@ -16,14 +16,26 @@ function bist_prbs_gen(;poly, inv, Nsym, seed)
     return seq, seed
 end
 
+function bist_prbs_gen!(seq; poly, inv, Nsym, seed)
+    for n = 1:Nsym
+        seq[n] = inv
+        for p in poly
+            seq[n] ⊻= seed[p]
+        end
+        seed .= [seq[n]; seed[1:end-1]]
+    end
+    return nothing
+end
+
 
 function pam_gen_top!(bist)
     @unpack pam, bits_per_sym, blk_size = bist.param
     @unpack polynomial, inv, gen_seed = bist
     @unpack gen_gray_map, gen_en_precode, gen_precode_prev_sym, So_bits, So = bist
 
-    So_bits, gen_seed = bist_prbs_gen(poly=polynomial, inv=inv,
-                                         Nsym=bits_per_sym*blk_size, seed=gen_seed)
+    bist_prbs_gen!(So_bits, poly=polynomial, inv=inv,
+                    Nsym=bits_per_sym*blk_size, seed=gen_seed)
+
 
     fill!(So, zero(Float64))
     for n = 1:bits_per_sym
@@ -73,15 +85,15 @@ function ber_checker_top!(bist)
 end
 
 function ber_check_prbs!(bist)
-    @unpack polynomial, inv, chk_seed, Si_bits = bist
+    @unpack polynomial, inv, chk_seed, ref_bits, Si_bits = bist
     nbits_rcvd = lastindex(Si_bits)
 
     # err_loc = rand(Uniform(0,1.0), nbits_rcvd).< 1e-4;
     # Si_bits .= Si_bits .⊻ err_loc
 
     if bist.chk_lock_status
-        ref_bits, chk_seed = bist_prbs_gen(poly=polynomial, inv=inv,
-                                                 Nsym=nbits_rcvd,seed=chk_seed)
+        bist_prbs_gen!(ref_bits, poly=polynomial, inv=inv,
+                        Nsym=nbits_rcvd,seed=chk_seed)
 
 
         bist.ber_err_cnt += sum(Si_bits .⊻ ref_bits)
@@ -102,10 +114,9 @@ function ber_check_prbs!(bist)
             if bist.chk_lock_cnt == bist.chk_lock_cnt_threshold
                 bist.chk_lock_status = true
                 println("prbs locked")
-                ref_bits, chk_seed = bist_prbs_gen(poly=polynomial, inv=inv,
-                                                        Nsym=nbits_rcvd-n, seed=chk_seed)
-                bist.ber_err_cnt += sum(Si_bits[n+1:end] .⊻ ref_bits)
-                bist.ber_bit_cnt += nbits_rcvd-n
+                ~, chk_seed = bist_prbs_gen(poly=polynomial, inv=inv,
+                                            Nsym=nbits_rcvd-n, seed=chk_seed)
+                #run prbs towards the end of the block to get the right seed
                 break
             end
         end

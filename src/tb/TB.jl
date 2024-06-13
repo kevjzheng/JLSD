@@ -15,8 +15,8 @@ function init_trx()
     param = TrxStruct.Param(  
                 data_rate = 56e9,
                 pam = 2,
-                osr = 32,
-                blk_size = 2^10,
+                osr = 24,
+                blk_size = 2^11,
                 subblk_size = 32, 
                 nsym_total = Int(1e6))
     Random.seed!(param.rand_seed)
@@ -24,7 +24,7 @@ function init_trx()
     #bist param
     bist = TrxStruct.Bist(  
                 param = param,
-                polynomial = [28,31])
+                polynomial = TrxStruct.PRBS31)
 
 
     #TX driver param
@@ -37,7 +37,7 @@ function init_trx()
                 dcd = 0.03,
                 rj_s = 300e-15,
                 sj_amp_ui = 0.1,
-                sj_freq = 5e5)
+                sj_freq = 2e5)
 
     #AWGN ch param
     ch = TrxStruct.Ch(
