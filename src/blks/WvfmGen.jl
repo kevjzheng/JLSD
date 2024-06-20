@@ -154,11 +154,19 @@ end
 
 
 
-function w_newfig()
-    s = GLMakie.Screen()
-    f = Figure()
-    display(s,f)
-    return f
+function w_newfig(nrow=1, ncol=1; kwargs...)
+	sc = GLMakie.Screen();
+	f = Figure(; kwargs...);
+	display(sc,f)
+	axes = Array{Axis}(undef,nrow,ncol)
+
+	for r=1:nrow
+		for c = 1:ncol
+			axes[r,c] = Axis(f[r,c])
+		end
+	end
+	
+	return f, axes
 end
 
 

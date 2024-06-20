@@ -6,7 +6,7 @@ include("./tb/TB.jl")
 
 trx = init_trx()
 # VSCodeServer.@profview_allocs run_sim(trx, run_sim_blk)
-@time run_sim(trx, run_sim_blk)
+@time run_blk_iter(trx, 0, trx.param.nblk, sim_blk)
 
 trx.wvfm.en_plot=true
 w_plot_test(trx.wvfm)

@@ -106,10 +106,34 @@ function init_trx()
     return (;param, bist, drv, ch, clkgen, splr, dslc, eslc, cdr, adpt, wvfm)
 end
 
-
-function run_sim_blk(trx)
+function sim_subblk(trx, blk_idx)
     @unpack param, bist, drv, ch, clkgen, splr = trx 
     @unpack dslc, eslc, cdr, adpt, wvfm = trx
+
+    param.cur_subblk = blk_idx
+
+    clkgen_pi_itp_top!(clkgen, pi_code=cdr.pi_code)
+        
+    sample_phi_top!(splr, clkgen.Φo)
+
+    slicers_top!(dslc, splr.So_subblk, ref_code=[[128],[128],[128],[128]])
+    slicers_top!(eslc, splr.So_subblk, ref_code=adpt.eslc_ref_vec)
+
+    cdr_top!(cdr, dslc.So, eslc.So)
+
+    adpt_top!(adpt, dslc.So, eslc.So)
+
+    append!(bist.Si, [sum(dvec) for dvec in dslc.So])
+
+    push!(wvfm.buffer12, adpt.eslc_ref_code)
+    push!(wvfm.buffer22, cdr.pi_code)
+end
+
+function sim_blk(trx, blk_idx)
+    @unpack param, bist, drv, ch, clkgen, splr = trx 
+    @unpack dslc, eslc, cdr, adpt, wvfm = trx
+
+    param.cur_blk = blk_idx
 
     pam_gen_top!(bist)
 
@@ -121,26 +145,9 @@ function run_sim_blk(trx)
 
     sample_itp_top!(splr, ch.Vo)
 
-    for m = 1:param.nsubblk
-        param.cur_subblk = m
-        
-        clkgen_pi_itp_top!(clkgen, pi_code=cdr.pi_code)
-        
-        sample_phi_top!(splr, clkgen.Φo)
 
-        slicers_top!(dslc, splr.So_subblk, ref_code=[[128],[128],[128],[128]])
-        slicers_top!(eslc, splr.So_subblk, ref_code=adpt.eslc_ref_vec)
-
-        cdr_top!(cdr, dslc.So, eslc.So)
-
-        adpt_top!(adpt, dslc.So, eslc.So)
-
-        append!(bist.Si, [sum(dvec) for dvec in dslc.So])
-
-        push!(wvfm.buffer12, adpt.eslc_ref_code)
-        push!(wvfm.buffer22, cdr.pi_code)
-    end
-
+    run_blk_iter(trx, 0, param.nsubblk, sim_subblk)
+    
     ber_checker_top!(bist)
 
     #record waveform here
@@ -154,10 +161,10 @@ function run_sim_blk(trx)
 end
 
 
-function run_sim(trx, sim_blk::Function)
-    for n = 1:trx.param.nblk
-        trx.param.cur_blk = n
-        sim_blk(trx)
+function run_blk_iter(trx, idx, n_tot_blk, blk_func::Function)
+    if idx < n_tot_blk
+        blk_func(trx, idx+1)
+        run_blk_iter(trx, idx+1, n_tot_blk, blk_func)
     end
 end
 
