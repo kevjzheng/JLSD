@@ -16,7 +16,7 @@ function init_trx()
                 data_rate = 56e9,
                 pam = 2,
                 osr = 24,
-                blk_size = 2^11,
+                blk_size = 2^10,
                 subblk_size = 32, 
                 nsym_total = Int(1e6))
     Random.seed!(param.rand_seed)
@@ -92,7 +92,7 @@ function init_trx()
     #waveform plotting param
     wvfm = TrxStruct.Wvfm(
                 param = param,
-                en_plot = false,
+                en_plot = true,
                 nrow = 3,
                 ncol = 2)
     wvfm.eye1.clk_skews = clkgen.skews

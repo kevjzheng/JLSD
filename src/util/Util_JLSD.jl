@@ -101,6 +101,15 @@ function u_unwrap_0x(xpts; tol_Δui = 0.5) #assumes 0-1UI range, vectorized
     return xpts_unwrap
 end
 
+function u_fr_to_imp(filename::String, Tsym, osr; npre=50, npost=200, savename = "", freq_name="fr", tf_name="H")
+    data = matopen(filename)
+    fr = vec(read(data, freq_name))
+    H = vec(read(data, tf_name))
+    close(data)
+    return u_fr_to_imp(fr, H, Tsym, osr, npre=npre, npost=npost, savename = savename)
+end
+
+
 function u_fr_to_imp(f, H, Tsym, osr; npre=50, npost=200, savename = "", t_name="dt", ir_name="ir")
     fbaud = 1/Tsym
     fbaud_max = 2*maximum(f)
@@ -157,13 +166,7 @@ function u_fr_to_imp(f, H, Tsym, osr; npre=50, npost=200, savename = "", t_name=
     return ir_itp
 end
 
-function u_fr_to_imp(filename, Tsym, osr; npre=50, npost=200, savename = "", freq_name="fr", tf_name="H")
-    data = matopen(filename)
-    fr = vec(read(data, freq_name))
-    H = vec(read(data, tf_name))
-    close(data)
-    return u_fr_to_imp(fr, H, Tsym, osr, npre=npre, npost=npost, savename = savename)
-end
+
 
 
 end

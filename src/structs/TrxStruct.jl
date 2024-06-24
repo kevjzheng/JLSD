@@ -121,7 +121,7 @@ end
 
     noise_Z::Float64 = 50
     noise_dbm_hz::Float64 = -174
-    noise_rms::Float64 = sqrt(0.5/param.dt*10^((noise_dbm_hz-30)/10)*noise_Z)
+    noise_rms::Float64 = sqrt(0.5/param.dt*10^((noise_dbm_hz-30.0)/10)*noise_Z)
 
 
     ir_pad::Vector{Float64}
@@ -286,7 +286,7 @@ end
     const param::Param
 
     en_plot = true
-    plot_every_nblk = Int(round(5e5/param.blk_size))
+    plot_every_nblk = Int(round(1e5/param.blk_size))
 
     sizex = 800
     sizey = 840 
