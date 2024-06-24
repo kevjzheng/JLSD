@@ -3,7 +3,9 @@ message: "If you use this software or contents, please cite it as below."
 authors:
 - family-names: "Zheng"
   given-names: "Kevin"
+  orcid: "https://orcid.org/0000-0003-1818-5093"
 title: "Julia SerDes"
 version: 1.0
+doi: 10.5281/zenodo.12520404
 date-released: 2024-06-24
 url: "https://github.com/kevjzheng/JLSD"
