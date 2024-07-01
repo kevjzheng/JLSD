@@ -7,4 +7,4 @@ The goals for this project (still in its infant stage) are
 - Document and share my personal Julia journey so far
 - Using SerDes simulation as an example to demonstrate the pros/cons of Julia
 - Begin a open-source and expandable SerDes simulation framework that encourages academia and industry adoption to evaluate more sophositicated architectures and algorithms
-- Expose my fellow analog/mixed-signal designers to Julia (because not everyone can get a MATLAB license). It's much easier to design circuts when one can play with the specifications instead of taking it from others at face value
+- Expose my fellow analog/mixed-signal designers to Julia (because not everyone can get a MATLAB license). It's much easier to design circuits when one can play with the specifications instead of taking it from others at face value
