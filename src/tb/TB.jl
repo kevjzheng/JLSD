@@ -1,5 +1,5 @@
 using GLMakie, Makie
-using UnPack, Random, Interpolations
+using UnPack, Random, Interpolations, ColorSchemes, Colors
 include("../structs/TrxStruct.jl"); #using .TrxStruct
 includet("../util/Util_JLSD.jl"); using .Util_JLSD
 includet("../blks/BlkBIST.jl"); using .BlkBIST
@@ -15,7 +15,7 @@ function init_trx()
     param = TrxStruct.Param(  
                 data_rate = 56e9,
                 pam = 2,
-                osr = 24,
+                osr = 20,
                 blk_size = 2^10,
                 subblk_size = 32, 
                 nsym_total = Int(1e6))
@@ -31,12 +31,12 @@ function init_trx()
     drv = TrxStruct.Drv(
                 param = param,
                 ir = u_gen_ir_rc(param.dt, param.fbaud, 20*param.tui),
-                fir = [1., -0.2],
+                fir = [1., -0.25],
                 swing = 0.8,
                 jitter_en = true,
                 dcd = 0.03,
                 rj_s = 300e-15,
-                sj_amp_ui = 0.1,
+                sj_amp_ui = 0.0,
                 sj_freq = 2e5)
 
     #AWGN ch param
@@ -98,6 +98,9 @@ function init_trx()
     wvfm.eye1.clk_skews = clkgen.skews
     wvfm.eye1.clk_rj = clkgen.rj
     wvfm.eye1.noise_rms = dslc.noise_rms
+    cm_turbo = colorschemes[:turbo]
+    cm_turbo.colors[1] = RGB(1.0,1.0,1.0)
+    wvfm.eye1.colormap = cm_turbo
 
     init_plot(wvfm)
     
@@ -114,7 +117,7 @@ function sim_subblk(trx, blk_idx)
 
     clkgen_pi_itp_top!(clkgen, pi_code=cdr.pi_code)
         
-    sample_phi_top!(splr, clkgen.Φo)
+    sample_phi_top!(splr, clkgen.Φo_subblk)
 
     slicers_top!(dslc, splr.So_subblk, ref_code=[[128],[128],[128],[128]])
     slicers_top!(eslc, splr.So_subblk, ref_code=adpt.eslc_ref_vec)
@@ -156,16 +159,10 @@ function sim_blk(trx, blk_idx)
     append!(wvfm.buffer31, splr.So)
     append!(wvfm.eye1.buffer, splr.Vo)
     wvfm.eslc_ref_ob.val = adpt.eslc_ref_code*eslc.dac_lsb+eslc.dac_min
-    wvfm.eye1.x_ofst = round(-(cdr.pi_code/clkgen.pi_codes_per_ui)*wvfm.eye1.x_npts_ui[]+wvfm.eye1.x_npts[]/2)
+    wvfm.eye1.x_ofst = 0#round(-(cdr.pi_code/clkgen.pi_codes_per_ui)*wvfm.eye1.x_npts_ui[]+wvfm.eye1.x_npts[]/2)
     w_plot_test(wvfm, cond=(param.cur_blk%wvfm.plot_every_nblk==0))
 end
 
 
-function run_blk_iter(trx, idx, n_tot_blk, blk_func::Function)
-    if idx < n_tot_blk
-        blk_func(trx, idx+1)
-        run_blk_iter(trx, idx+1, n_tot_blk, blk_func)
-    end
-end
 
-    
+

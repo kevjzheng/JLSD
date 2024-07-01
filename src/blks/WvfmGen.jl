@@ -5,6 +5,7 @@ include("../util/Util_JLSD.jl"); using .Util_JLSD
 
 
 export init_plot, w_plot_test, w_plot_test2, w_eye_gen_heatmap, update_eye
+export w_gen_eye_simple, w_gen_eye_simple!
 export w_newfig
 
 function init_plot(wvfm)
@@ -34,7 +35,7 @@ function init_plot(wvfm)
     ax31.title = "Sampled voltage"
     ylims!(ax31, -.4, .4)
     scatter!(ax31, V31_x, V31_y, alpha=0.2, markersize = 6)
-    hlines!(ax31, eslc_ref_ob, color=:orange, linestyle=:dash, linewidth=3)
+    hlines!(ax31, eslc_ref_ob, color=:red, linestyle=:dash, linewidth=3)
 
 
     ax12 = wvfm.axes[1,2]
@@ -52,6 +53,7 @@ function init_plot(wvfm)
     heatmap!(ax_eye, eye1.x_grid, eye1.y_grid, eye1.heatmap_ob, 
             colormap=eye1.colormap,
             inspector_label = (self, i, p) -> @sprintf("x = %.3f, y = %.3f", p[1], p[2]))
+    hlines!(ax_eye, eslc_ref_ob, color=:red, linestyle=:dash, linewidth=3)
 
     DataInspector(wvfm.fig)
 
@@ -85,6 +87,7 @@ function w_plot_test(wvfm; cond = true)
             
             display(wvfm.screen, wvfm.fig)
             sleep(.0001)
+            # yield()
     end
 
 end
@@ -103,6 +106,23 @@ function w_gen_eye_simple(input,x_npts_ui, x_npts, y_range, y_npts; osr, x_ofst=
    
     return circshift(heatmap, (Int(x_ofst), 0))
 
+end
+
+function w_gen_eye_simple!(heatmap, input,x_npts_ui, x_npts, y_range, y_npts; osr, x_ofst=0, shadow=0.0)
+
+    heatmap .*= shadow
+
+    input_x = 0:1/osr:(lastindex(input)-1)/osr
+    itp_resample = linear_interpolation(input_x, input)
+    idx_itp = 0:1/x_npts_ui:input_x[end]
+    input_itp = itp_resample.(idx_itp)
+
+    for n = 1:x_npts
+        k = Int(mod(n-1+x_ofst, x_npts)+1)
+        heatmap[k,:] .+= (1.0-shadow) .* u_hist(input_itp[n:x_npts:end], -y_range/2, y_range/2, y_npts)
+    end
+   
+    return nothing
 end
 
 function w_eye_gen_heatmap(heatmap_ob_trig, eye)

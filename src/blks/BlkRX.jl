@@ -24,11 +24,12 @@ function clkgen_pi_itp_top!(clkgen; pi_code)
     Φskew = kron(ones(Int(subblk_size/nphases)), skews/tui*osr)
     Φrj = rj/tui*osr*randn(subblk_size)
 
-    @. clkgen.Φo = Φ0 + Φnom + Φskew + Φrj
+    @. clkgen.Φo_subblk = Φ0 + Φnom + Φskew + Φrj
     
     clkgen.pi_code_prev = pi_code
     clkgen.pi_wrap_ui = pi_wrap_ui
-    
+    append!(clkgen.Φo, clkgen.Φo_subblk)
+
 end
 
 

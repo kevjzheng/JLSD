@@ -9,14 +9,17 @@ function ch_top!(ch,Vi)
     @unpack noise_en, noise_rms= ch
     @unpack ir_ch, ir_pad, Vch_mem, Vo_mem = ch
 
+    if ch.ch_en
+        u_conv!(ch.Vch_conv, Vi, ir_ch, Vi_mem=Vch_mem, gain = dt)
 
-    u_conv!(ch.Vch_conv, Vi, ir_ch, Vi_mem=Vch_mem, gain = dt)
+        if noise_en
+            ch.Vch .+= noise_rms .* randn(blk_size_osr)
+        end
 
-    if noise_en
-        ch.Vch .+= noise_rms .* randn(blk_size_osr)
+        u_conv!(ch.Vo_conv, ch.Vch, ir_pad, Vi_mem=Vo_mem, gain = dt)
+    else
+        ch.Vo .= Vi 
     end
-
-    u_conv!(ch.Vo_conv, ch.Vch, ir_pad, Vi_mem=Vo_mem, gain = dt)
 
 end
 

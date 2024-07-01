@@ -8,7 +8,7 @@ using InteractiveUtils
 using Parameters, UnPack, DSP, FFTW, Random, Interpolations, DataStructures, Distributions, StatsBase, MAT
 
 # ╔═╡ 33e5faec-0407-489e-a9e7-d90ce3ee9368
-using GLMakie, Makie
+using GLMakie, Makie, ColorSchemes, Colors
 
 # ╔═╡ 81b6950c-9eb2-4a72-820c-e8a246776c56
 include("../../src/structs/TrxStruct.jl");
@@ -40,7 +40,7 @@ end
 # ╔═╡ 8dc41adf-b61d-49da-a04d-54442a051a67
 begin
 include("../../src/blks/WvfmGen.jl");
-import .WvfmGen: w_gen_eye_simple
+import .WvfmGen: w_gen_eye_simple, w_gen_eye_simple!
 end
 
 # ╔═╡ 69e46020-2f48-11ef-0e3a-23d26a279b9d
@@ -135,6 +135,8 @@ So how does this translate to Makie plots? Using observables, we only need to up
 """
 
 # ╔═╡ d3f53e27-5958-48d0-82ad-884500c60f15
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 ftest = Figure();
 axtest = Axis(ftest[1,1])
@@ -144,8 +146,11 @@ ylims!(axtest,(-3.5, 3.5))
 test_lbl = Label(ftest[2,1], "Rerun me!", tellwidth = false, fontsize=32);
 display(GLMakie.Screen(), ftest); #run this cell to get a pop-up window
 end
+  ╠═╡ =#
 
 # ╔═╡ 1422f9a9-024e-4715-b3cc-6f84961a8eac
+# ╠═╡ disabled = true
+#=╠═╡
 begin #Rerun this cell to see the plot change by simply update test_data[]
 test_lbl.text = "Running"
 for n = 1:5
@@ -154,6 +159,7 @@ for n = 1:5
 end
 test_lbl.text = "Rerun me!"
 end
+  ╠═╡ =#
 
 # ╔═╡ d0fcb7ce-2d6b-453d-b9c7-aed81595aba3
 md"""
@@ -276,6 +282,8 @@ These grant us enough flexibility and options to begin building the eye diagram 
 """
 
 # ╔═╡ 96d45520-b93e-4864-a950-8002afe214a5
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 function peaks(; n = 49)
     x = LinRange(-3, 3, n)
@@ -303,6 +311,7 @@ with_theme(theme_dark()) do
     fig
 end
 end
+  ╠═╡ =#
 
 # ╔═╡ 22e655f4-d8e9-4900-affa-546ab5026e81
 md"""
@@ -346,6 +355,7 @@ drv = TrxStruct.Drv(
 	
 ch = TrxStruct.Ch(
 			param = param,
+			ch_en = false,
 			ir_ch = u_fr_to_imp("../../channel_data/TF_data/channel_4inch.mat", 
 					param.tui, param.osr, npre = 20, npost= 79),
 			ir_pad = u_gen_ir_rc(param.dt, param.fbaud, 20*param.tui),
@@ -363,20 +373,17 @@ At a high level, if block size is too small, the frame rate will naturally be fa
 """
 
 # ╔═╡ f18af4fc-1bfc-45f3-88af-5feb27303155
-function step_sim_blk(trx; ch_en)
+function step_sim_blk(trx)
 	@unpack bist, drv, ch = trx 
 	
 	pam_gen_top!(bist)
 	
 	dac_drv_top!(drv, bist.So)
 
-	if ch_en
-		ch_top!(ch, drv.Vo)
-		return copy(ch.Vo)
-	else
-		return copy(drv.Vo) 
-		#we are returning copies of drv/ch.Vo because remember they are views/subarrays
-	end
+	ch_top!(ch, drv.Vo)
+
+	return copy(ch.Vo)
+	#we are returning copies of drv/ch.Vo because remember they are views/subarrays
 	
 end
 
@@ -391,9 +398,11 @@ x_nui = 2
 x_npts_ui = 256
 x_npts = x_nui*x_npts_ui
 y_range = 1 #+/-0.5
-y_npts = 256
+y_npts = 512
 x_grid = -x_nui/2: 1/x_npts_ui:x_nui/2-1/x_npts_ui
 y_grid = -y_range*(0.5-.5/y_npts):y_range/y_npts:y_range*(0.5-.5/y_npts)
+cm_turbo = copy(colorschemes[:turbo].colors)
+cm_turbo[1] = RGB(.97,.97,.97)
 end;
 
 # ╔═╡ 47803c96-38b7-4554-a5e9-031966756b5f
@@ -402,13 +411,16 @@ Now we will use observable to define the eye diagram to be plotted. ```eye_buffe
 """
 
 # ╔═╡ 4a1aa2b3-8fdd-4bc9-bfed-8bd546a24bef
-eye_buffer = Observable(copy(drv.Vo));
+eye_buffer = Observable(ch.Vo);
 
-# ╔═╡ 39ba1406-b460-44d3-8de2-80da741b92c8
-last_heatmap = zeros(x_npts,y_npts);
+# ╔═╡ ac5ad027-a8cf-44a7-86ed-c19a589019ce
+cur_heatmap = zeros(x_npts,y_npts);
 
 # ╔═╡ 2cadbaef-eebb-4943-a08d-d70f62dc4c72
 shadow_weight = Observable(0.5);
+
+# ╔═╡ c51fbd6a-b07c-4ddb-927a-fa19186db679
+xofst = Observable(0);
 
 # ╔═╡ b4434801-fabf-4152-a136-06c66a7abe9c
 md"""
@@ -417,8 +429,7 @@ Here we create a new observable, chained from ```eye_buffer```. So eveytime ```e
 
 # ╔═╡ 78b50e9d-e650-459b-a291-e33235974534
 eye_heatmap = @lift begin
-	cur_heatmap = shadow_weight[]*last_heatmap .+ w_gen_eye_simple($eye_buffer, x_npts_ui, x_npts, y_range, y_npts; osr = trx.param.osr)
-	last_heatmap = cur_heatmap
+	w_gen_eye_simple!(cur_heatmap, $eye_buffer, x_npts_ui, x_npts, y_range, y_npts; osr = trx.param.osr, x_ofst=xofst[], shadow = shadow_weight[])
 	cur_heatmap #returns the current heatmap
 end;
 
@@ -431,16 +442,18 @@ Time to make the widget UI! The entire figure creation is capture in the followi
 begin #run this block to see the widget!
 f = Figure(size=(700,700))
 #plot the eye diagram, pass the observable directly in
-heatmap!(Axis(f[1:2, 1:3]), x_grid, y_grid, eye_heatmap, colormap=:turbo)
+sl_xofst = Slider(f[1,1:3], range = -x_npts/2:x_npts/2-1, startvalue = 0)
+heatmap!(Axis(f[2:3, 1:3]), x_grid, y_grid, eye_heatmap, colormap=cm_turbo)
 
+gctrl = GridLayout(f[4,1:3])
 #run button
-btn_run = Button(f[3,1][1,1], label ="Run", tellwidth=false, tellheight=false, width = 140, height=60, fontsize=28);
+btn_run = Button(gctrl[1,1], label ="Run", tellwidth=false, tellheight=false, width = 140, height=60, fontsize=28);
 #enable channel button
-btn_ch_en = Button(f[3,1][2,1], label="Channel\nDisabled", tellwidth = false, tellheight=false, width=100, height=50, fontsize=18);
+btn_ch_en = Button(gctrl[2,1], label="Channel\nDisabled", tellwidth = false, tellheight=false, width=100, height=50, fontsize=18);
 #slider for after image weight
-sl_shadow = SliderGrid(f[3,1][3,1], (label="After Image",  range=0:0.01:1, startvalue=shadow_weight[]), tellwidth = false, tellheight=false, width=200);
+sl_shadow = SliderGrid(gctrl[3,1], (label="After Image",  range=0:10, startvalue=shadow_weight[]), tellwidth = false, tellheight=false, width=200);
 #sliders for TX/Channel parameters
-sl = SliderGrid(f[3,2:3],
+sl = SliderGrid(gctrl[:,2:3],
 	(label = "FIR post-tap", range=0:-0.05:-0.5, startvalue = trx.drv.fir[2]),
 	(label = "DCD", range=0:1:20, format = "{:d} %", startvalue = trx.drv.dcd*100),
     (label = "RJ", range=0:0.1:2, format = "{:.1f} ps", startvalue = trx.drv.rj_s/1e-12),
@@ -468,15 +481,22 @@ The section below contains the code related to how each UI element works. Each o
 begin
 ch_en = Observable(false); #this is passed to the step_sim_blk function above
 ch_en_func = on(btn_ch_en.clicks) do clicks
-	ch_en[] = ~ch_en[];
-	btn_ch_en.label = ch_en[] ? "Channel\nEnabled" : "Channel\nDisabled"
+	trx.ch.ch_en = ~trx.ch.ch_en;
+	btn_ch_en.label = trx.ch.ch_en ? "Channel\nEnabled" : "Channel\nDisabled"
 end
 end;
 
 # ╔═╡ 8b44925f-d944-4498-a926-11ebb56db7d8
 begin
 eye_shadow = lift(sl_shadow.sliders[1].value) do val
-	shadow_weight[] = (val == 1.0) ? 0.9999 : val #when weight =1, we purposely make it very close 1 becausue a perfect integrator can cause Float overflow
+	shadow_weight[] = 1.0 - .5^val 
+end
+end;
+
+# ╔═╡ 5a04a0b6-1fdb-49cf-8f49-fb12db7f8597
+begin
+eye_ofst = lift(sl_xofst.value) do val
+	xofst[] = round(Int, val)
 end
 end;
 
@@ -513,7 +533,8 @@ end;
 run_func2 = on(btn_run.clicks) do clicks
 	@async while isrunning[]
 		isopen(f.scene) || break
-		eye_buffer[] = step_sim_blk(trx, ch_en=ch_en[]); #this is the animation step
+		step_sim_blk(trx)
+		eye_buffer[] = ch.Vo #this is the animation step
 		yield()
 		# sleep(0.001) #use sleep to slow down the frame rate if desired
 	end
@@ -564,6 +585,8 @@ md"""
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
+Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -578,6 +601,8 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
+ColorSchemes = "~3.25.0"
+Colors = "~0.12.11"
 DSP = "~0.7.9"
 DataStructures = "~0.18.20"
 Distributions = "~0.25.109"
@@ -597,7 +622,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "8fb999d6823768501c1ad212c33b7e78a07e3a65"
+project_hash = "c58efdc54e1225f014605a89aa56163c91a8fdcb"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2179,8 +2204,9 @@ version = "3.5.0+0"
 # ╠═696c8ef8-863c-4b7e-84e8-3e579cb9255e
 # ╟─47803c96-38b7-4554-a5e9-031966756b5f
 # ╠═4a1aa2b3-8fdd-4bc9-bfed-8bd546a24bef
-# ╠═39ba1406-b460-44d3-8de2-80da741b92c8
+# ╠═ac5ad027-a8cf-44a7-86ed-c19a589019ce
 # ╠═2cadbaef-eebb-4943-a08d-d70f62dc4c72
+# ╠═c51fbd6a-b07c-4ddb-927a-fa19186db679
 # ╟─b4434801-fabf-4152-a136-06c66a7abe9c
 # ╠═78b50e9d-e650-459b-a291-e33235974534
 # ╟─4dd5297b-0dd5-481c-b851-d9b4e009271c
@@ -2189,6 +2215,7 @@ version = "3.5.0+0"
 # ╟─b4eb62d7-3942-4987-a106-ffe305c2a997
 # ╠═3b9c6cf2-0667-480b-9d50-3a7d9952cc91
 # ╠═8b44925f-d944-4498-a926-11ebb56db7d8
+# ╠═5a04a0b6-1fdb-49cf-8f49-fb12db7f8597
 # ╠═d10036aa-eae6-43bb-893c-c11380f61d7f
 # ╟─4c9f4620-8df6-4b3e-b836-9989ac5bb4cf
 # ╠═445f6bea-97b7-43ce-a51f-1a4ae15968db

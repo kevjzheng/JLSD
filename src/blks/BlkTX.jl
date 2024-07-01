@@ -55,12 +55,8 @@ function drv_jitter_Δt!(Δtt; blk_size, osr, dcd, rj_osr, sj_amp_osr, sj_freq_n
     Δtt .+= rj_osr .* randn(blk_size) #add rj
     
     phi_sj = (last_sj_phi .+ (2π*sj_freq_norm) * (1:blk_size)) .% (2π)
+    Δtt .+= sj_amp_osr .* sin.(phi_sj) #add sj
 
-    if sj_freq_norm != 0.0
-        Δtt .+= sj_amp_osr .* sin.(phi_sj) #add sj
-    else
-        Δtt .+= sj_amp_osr #use sj_amp_osr as PI
-    end
 
     return phi_sj[end]
 end

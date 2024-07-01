@@ -1,6 +1,6 @@
 module TrxStruct
 using Parameters, DataStructures, DSP, FFTW
-using GLMakie, Makie
+using GLMakie, Makie, ColorSchemes
 
 
 export Param, Bist, Drv, Ch, Clkgen, Splr, Slicers, Cdr, Adpt, Eye, Wvfm
@@ -111,6 +111,7 @@ end
 
 @kwdef mutable struct Ch
     const param::Param
+    ch_en = true
     noise_en = true
 
     ir_ch::Vector{Float64}
@@ -175,7 +176,8 @@ end
     pi_wrap_ui = 0
     pi_wrap_ui_Δcode = pi_max_code-10
 
-    Φo::Vector = zeros(param.subblk_size)
+    Φo = CircularBuffer{Float64}(param.blk_size)
+    Φo_subblk::Vector = zeros(param.subblk_size)
 
 end
 
@@ -262,9 +264,9 @@ end
 @kwdef mutable struct Eye
     const param::Param
     x_npts_ui = Observable(Int(param.osr))
-    x_nui = Observable(1)
+    x_nui = Observable(2)
     x_npts = @lift($x_npts_ui*$x_nui)
-    x_grid = @lift(-$x_nui/2 : 1/$x_npts_ui: $x_nui/2-1/$x_npts_ui)
+    x_grid = @lift(-$x_nui/2+0.5/$x_npts_ui : 1/$x_npts_ui: $x_nui/2-0.5/$x_npts_ui)
     x_ofst = 0
     y_npts = Observable(64)
     y_range = Observable(0.8)
@@ -274,8 +276,11 @@ end
     buffer = CircularBuffer{Float64}(buffer_size)
     buffer_plt_len::Int = 2^14*param.osr
     heatmap_ob_trig = Observable{Bool}(true)
-    heatmap_ob = Observable{Matrix{Float64}}(zeros(x_npts.val, y_npts.val))
-    colormap = Observable(:turbo)
+    heatmap_ob = @lift begin
+        zeros($x_npts, $y_npts)
+    end
+    colormap = Observable(copy(colorschemes[:turbo].colors))
+    shadow_weight = 0.0
 
     clk_skews::Vector{Float64} = Float64[]
     clk_rj = 0.0
@@ -325,6 +330,8 @@ end
     
     eslc_ref_ob = Observable(0.0)
 end
+
+
 
 
 end

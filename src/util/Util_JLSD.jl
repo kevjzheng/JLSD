@@ -1,8 +1,17 @@
 module Util_JLSD
 using StatsBase, DSP, Interpolations, FFTW, MAT
 
+export run_blk_iter
 export u_conv!, u_filt!
 export u_gen_ir_rc, u_fr_to_imp, u_hist, u_find_0x, u_unwrap_0x
+
+
+function run_blk_iter(trx, idx, n_tot_blk, blk_func::Function)
+    if idx < n_tot_blk
+        blk_func(trx, idx+1)
+        run_blk_iter(trx, idx+1, n_tot_blk, blk_func)
+    end
+end
 
 
 function u_conv(input, ir; Vi_mem = zeros(1), gain = 1)
@@ -66,13 +75,13 @@ function u_hist(samples, edges)
 end
 
 function u_hist(samples, minval, maxval, nbin)
-    weights = zeros(nbin)
+    weights = zeros(Float64, nbin)
     bin_size = (maxval-minval)/nbin
 
     for s in samples
         idx = Int(floor((s-minval)/bin_size))+1
         idx = idx < 1 ? 1 : idx > nbin ? nbin : idx
-        weights[idx] += 1
+        weights[idx] += 1.0
     end
     return weights
 end
