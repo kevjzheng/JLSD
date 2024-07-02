@@ -125,38 +125,28 @@ function u_fr_to_imp(f, H, Tsym, osr; npre=50, npost=200, savename = "", t_name=
 
     @assert fbaud < fbaud_max "Max frequency too low for desired symbol rate"
 
-    fbaud_max = fbaud*floor(fbaud_max/fbaud)
+    f_ratio = floor(fbaud_max/fbaud)
+    fbaud_max = fbaud*f_ratio
 
-    Hm = abs.(H)
-    Hp = unwrap(angle.(H))
+    H_ss = (f[1] != 0) ? [abs(H[1]); H] : copy(H)
+    f_ss = (f[1] != 0) ? [0; f] : copy(f)
 
-    if f[1] == 0
-        Hm_ds = [reverse(Hm[2:end-1]); Hm]
-        Hp_ds = [reverse(-Hp[2:end-1]; Hp)]
-        f_ds = [-reverse(f[2:end-1]); f]
-    else
-        Hm_ds = [reverse(Hm[1:end-1]); abs(Hm[1]); Hm]
-        Hp_ds = [reverse(-Hp[1:end-1]); 0; Hp]
-        f_ds = [-reverse(f[1:end-1]); 0; f]
-    end
     
-    num_fft_pts = 2^16
-    df = fbaud_max/2/num_fft_pts
+    num_fft_pts = nextfastfft((npre+npost)*f_ratio)
+    df = fbaud_max/num_fft_pts
 
-    f_ds_itp = -fbaud_max/2+df:df:fbaud_max/2
-    itp_Hm = linear_interpolation(f_ds, Hm_ds)
-    Hm_ds_itp = ifftshift(itp_Hm.(f_ds_itp))
-    itp_Hp = linear_interpolation(f_ds, Hp_ds)
-    Hp_ds_itp = ifftshift(itp_Hp.(f_ds_itp))
+    f_ss_itp = 0:df:fbaud_max/2
+    Hm_ss_itp = linear_interpolation(f_ss, abs.(H_ss)).(f_ss_itp)
+    Hp_ss_itp = linear_interpolation(f_ss, unwrap(angle.(H_ss))).(f_ss_itp)
 
-    ir = fbaud_max*real.(ifft(Hm_ds_itp.*exp.(im.*Hp_ds_itp)))
+    ir = fbaud_max*irfft(Hm_ss_itp.*exp.(im.*Hp_ss_itp), num_fft_pts)
 
     dt = 1/fbaud_max
     tt = 0:dt:(length(ir)-1)*dt
     itp_ir = linear_interpolation(tt,ir);
     
     dt_s = Tsym/osr
-    tt_s =0:Tsym/osr:tt[end]
+    tt_s = 0:Tsym/osr:tt[end]
     ir_itp = itp_ir.(tt_s)
     
     max_idx = argmax(ir_itp)
@@ -174,9 +164,6 @@ function u_fr_to_imp(f, H, Tsym, osr; npre=50, npost=200, savename = "", t_name=
 
     return ir_itp
 end
-
-
-
 
 end
 
